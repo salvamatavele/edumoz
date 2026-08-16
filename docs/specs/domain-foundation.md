@@ -1,7 +1,8 @@
 # Spec — Fundação de Domínio (Fase 2)
 
-- **Estado:** Proposta — aguarda aprovação
+- **Estado:** **Implementado** (2026-08-16). Ver §9 para os desvios face a esta proposta.
 - **Data:** 2026-08-16
+- **Commit:** `feat: domain foundation` na branch `feat/domain-foundation`
 - **Fase anterior:** [`design-system.md`](./design-system.md) (design system + shell, concluída)
 - **Âmbito desta fase:** Modelo de dados, tipos, isolamento multi-escola, motores de domínio,
   i18n e componentes de dados. **Sem ecrãs de módulo.**
@@ -491,3 +492,76 @@ para marcação de presenças sem rede.
 | Migração dos primitivos para shadcn pode alterar o aspecto | `/design-system` serve de comparação lado a lado antes e depois |
 | `Decimal` do Prisma não é `number` | Conversão explícita nas fronteiras; o domínio usa um tipo `Money`/`Score` próprio |
 | Modelo de percursos pode não cobrir todas as escolas | O seed inclui um caso misto real; validar com utilizador antes dos módulos |
+
+---
+
+## 9. Desvios face a esta proposta, e porquê
+
+Esta secção foi escrita DEPOIS da implementação. Onde o código e o spec divergirem, o
+código está certo e é isto que explica porquê.
+
+### 9.1 `TeachingGroup` aponta para `Subject`, não para `CurriculumSubject`
+
+O §4.3 propunha ligar o agrupamento lectivo à disciplina curricular. Ao escrever o schema
+ficou claro que isso quebra o caso que o modelo existe para resolver: num grupo de Tronco
+Comum os alunos vêm de percursos diferentes, logo de linhas de `CurriculumSubject`
+diferentes, e uma chave estrangeira única não os consegue representar. O agrupamento
+aponta para `Subject`; a disciplina curricular de cada aluno deriva do percurso dele.
+
+### 9.2 Quatro falhas encontradas na revisão do esquema
+
+Revisão feita contra a base de dados real, antes de haver dados. Todas corrigidas:
+
+1. `Student`, `Teacher` e `Guardian` não tinham unicidade em `userId` — o mesmo `User`
+   podia ficar ligado a dois alunos da mesma escola.
+2. O índice único do `AssessmentScheme` incluía duas colunas nuláveis; com ambas a NULL —
+   o esquema base do ano — o MySQL aceitava duplicados ilimitados e a resolução deixava de
+   ser determinística. Acrescentado `@@unique([academicYearId, name, version])`.
+3. `Invitation` tinha um único `(schoolId, email, role)` que impedia reconvidar alguém
+   depois de o convite ser aceite. A regra passou para o domínio (`canCreateInvitation`).
+4. `IssuedDocument` caía em cascata com o aluno, destruindo certificados emitidos. Passou
+   a `onDelete: Restrict`.
+
+### 9.3 Escritas exigem `schoolId` no TypeScript
+
+A extensão de tenant actua em runtime e o sistema de tipos não a vê. Em vez de contornar
+com casts, aceitou-se: esquecer `schoolId` é erro de compilação, escrevê-lo errado é erro
+de runtime. As duas garantias juntas são mais fortes do que a injecção sozinha.
+
+### 9.4 Autenticação entrou nesta fase
+
+O §7 listava a autenticação como fora de âmbito, mas o RF-07 exigia-a e a página `/alunos`
+não tinha como resolver a escola sem ela. Entregue: política de acesso como função pura
+(22 testes), Auth.js v5 com Google e credenciais, protecção de rotas no `proxy.ts`.
+
+### 9.5 Outras decisões tomadas durante a construção
+
+| Decisão | Razão |
+|---|---|
+| TanStack Table **8**, não 9 | A v9 exige registo explícito de *features* com um modelo novo; a v8 é a linha que o shadcn documenta |
+| `localeDetection: false` | Muitos telemóveis Android em Moçambique vêm em inglês e são usados em português |
+| `accent` do shadcn remapeado para `muted` | No shadcn é superfície de *hover*; no EduMoz é o âmbar da CTA — o mapeamento directo pintaria cada menu de âmbar |
+| `--color-input` → `--edu-border-strong` | Com o contorno decorativo (1.2:1) todos os campos falhariam o critério de 3:1 do WCAG |
+| Botões com 44/48/56px | O shadcn usa 36 e 40px; a RNF-02 exige 44 |
+| `sortDescFirst: false` | O TanStack ordena colunas numéricas ao contrário das de texto |
+| Corpo do style guide só em português | É documentação para quem desenvolve; traduzir `border-strong` tornaria-a inútil |
+
+### 9.6 Estado dos critérios de aceitação
+
+Todos verificados excepto um. O que falta está em
+[`pending-fixes.md`](./pending-fixes.md).
+
+| Critério | Estado |
+|---|---|
+| `pnpm build`, `lint`, `test` verdes | ✅ 152 testes |
+| Migração de raiz + seed | ✅ |
+| Aluno de Ciências e de Letras na mesma turma | ✅ verificado em `/alunos` |
+| Professor com Tronco Comum, Secção e Currículo Interno | ✅ teste de integração |
+| Motor de avaliação reproduz o cálculo à mão | ✅ |
+| Trimestre fechado não muda ao reconfigurar a fórmula | ✅ por versão do esquema |
+| Conflito de horário rejeitado | ✅ |
+| Escola A não vê linhas da escola B | ✅ 11 testes de integração |
+| `/alunos` e `/en/students` funcionais | ✅ |
+| `DataTable` legível a 375px | ✅ colapsa em cartões |
+| Sem `any` no domínio | ✅ |
+| Zero regressões em `/design-system` | ⚠️ **não verificado visualmente** após a migração para shadcn |
