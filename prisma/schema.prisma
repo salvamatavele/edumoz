@@ -1,0 +1,1367 @@
+// EduMoz Gestor — modelo de dados
+// Spec: docs/specs/domain-foundation.md
+//
+// Convenções deste schema
+// -----------------------
+// 1. Multi-escola: quase todas as entidades têm `schoolId`. As excepções deliberadas são
+//    `User`, `Account`, `Session` e `VerificationToken` — um utilizador pode pertencer a
+//    várias escolas, e o vínculo faz-se por `Membership`.
+// 2. O aluno liga-se à escola pela MATRÍCULA (`Enrollment`), não pela turma. A turma
+//    (`ClassGroup`) é administrativa e pode conter percursos (`StudyPath`) diferentes.
+// 3. Carimbos de autoria (`recordedById`, `issuedById`, …) são `String` sem chave
+//    estrangeira: são registo histórico, e apagar um utilizador não deve apagar a prova de
+//    quem lançou uma nota. Os vínculos que precisamos de consultar têm relação a sério.
+// 4. Dinheiro em `Decimal(12,2)`, notas em `Decimal(5,2)`, pesos em `Decimal(5,4)`.
+//    Nunca `Float` — arredondamento binário não tem lugar em pautas nem em propinas.
+// 5. Horas em `String` "HH:mm". O tipo TIME do MySQL chega ao Prisma como `DateTime` com
+//    uma data fictícia, o que convida a erros de fuso. "07:30" não tem fuso nenhum.
+// 6. CAVEAT MySQL: num índice único, NULLs são sempre distintos entre si. Índices que
+//    incluem colunas nuláveis (`StudyPath.sectionId`, `AttendanceSession.timeSlotId`)
+//    são rede de segurança parcial — a garantia real está nos índices só com colunas
+//    não-nuláveis, assinalados caso a caso.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ===========================================================================
+// IDENTIDADE — escola, utilizadores, papéis
+// ===========================================================================
+
+enum Role {
+  PLATFORM_ADMIN
+  SCHOOL_MANAGER
+  TEACHER
+  STUDENT
+  GUARDIAN
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+enum SchoolCycle {
+  PRIMARY
+  SECONDARY_FIRST_CYCLE
+  SECONDARY_SECOND_CYCLE
+  TECHNICAL
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model School {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  shortName String?
+
+  province String
+  district String
+  address  String?
+  phone    String?
+  email    String?
+  logoUrl  String?
+
+  /// Restringe o login Google a contas deste domínio (ex.: "escolax.co.mz"). Nulo = sem restrição.
+  allowedEmailDomain String?
+
+  defaultLocale String  @default("pt")
+  currency      String  @default("MZN")
+  isActive      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships        Membership[]
+  invitations        Invitation[]
+  students           Student[]
+  guardians          Guardian[]
+  teachers           Teacher[]
+  academicYears      AcademicYear[]
+  terms              Term[]
+  gradeLevels        GradeLevel[]
+  sections           Section[]
+  studyPaths         StudyPath[]
+  subjects           Subject[]
+  curriculumSubjects CurriculumSubject[]
+  classGroups        ClassGroup[]
+  rooms              Room[]
+  enrollments        Enrollment[]
+  teachingGroups     TeachingGroup[]
+  assessmentSchemes  AssessmentScheme[]
+  assessments        Assessment[]
+  grades             Grade[]
+  termResults        TermResult[]
+  timeSlots          TimeSlot[]
+  scheduleEntries    ScheduleEntry[]
+  attendanceSessions AttendanceSession[]
+  feeSchedules       FeeSchedule[]
+  feeItems           FeeItem[]
+  invoices           Invoice[]
+  payments           Payment[]
+  studentCards       StudentCard[]
+  issuedDocuments    IssuedDocument[]
+  auditLogs          AuditLog[]
+
+  @@index([isActive])
+}
+
+/// Global, partilhado por todas as escolas. O papel NÃO vive aqui — vive na Membership.
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  /// Login alternativo para alunos e encarregados sem conta Google.
+  phone        String? @unique
+  /// Argon2id. Nulo quando o utilizador só entra por Google.
+  passwordHash String?
+
+  isPlatformAdmin Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts            Account[]
+  sessions            Session[]
+  memberships         Membership[]
+  invitationsSent     Invitation[] @relation("InvitationInvitedBy")
+  invitationsAccepted Invitation[] @relation("InvitationAcceptedBy")
+  studentProfiles     Student[]
+  guardianProfiles    Guardian[]
+  teacherProfiles     Teacher[]
+}
+
+/// Auth.js — contas OAuth ligadas (Google). Ver docs/specs/domain-foundation.md §3.6.
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// Auth.js — usado pelo adaptador. A estratégia activa é JWT, mas o adaptador exige o modelo.
+model Session {
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+/// Vínculo utilizador ↔ escola com um papel. Um utilizador pode ser professor numa escola
+/// e encarregado de educação noutra — ou ambos na mesma.
+model Membership {
+  id       String @id @default(cuid())
+  userId   String
+  schoolId String
+  role     Role
+
+  status MembershipStatus @default(ACTIVE)
+  isDefault Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, schoolId, role])
+  @@index([schoolId, role])
+}
+
+/// O login Google não cria contas — aceita quem já tem Membership ou um convite válido.
+model Invitation {
+  id       String @id @default(cuid())
+  schoolId String
+  email    String
+  role     Role
+
+  token       String           @unique
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+
+  invitedById      String
+  acceptedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school         School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  invitedBy      User   @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
+  acceptedByUser User?  @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id])
+
+  /// Sem índice único em (schoolId, email, role): bloquearia reconvidar alguém depois de
+  /// o convite ser aceite ou revogado — um professor que sai e volta ficaria de fora.
+  /// A regra "no máximo um convite PENDING por escola/e-mail/papel" é do domínio.
+  @@index([schoolId, email, status])
+  @@index([email, status])
+  @@index([invitedById])
+  @@index([acceptedByUserId])
+}
+
+// ===========================================================================
+// IDENTIDADE — pessoas
+// ===========================================================================
+
+enum GuardianRelationship {
+  FATHER
+  MOTHER
+  GRANDPARENT
+  SIBLING
+  UNCLE_AUNT
+  LEGAL_GUARDIAN
+  OTHER
+}
+
+model Student {
+  id       String  @id @default(cuid())
+  schoolId String
+  /// Preenchido quando o aluno tem credenciais próprias.
+  userId   String?
+
+  /// Número de aluno, único dentro da escola.
+  code      String
+  firstName String
+  lastName  String
+  birthDate DateTime @db.Date
+  gender    Gender
+
+  birthPlace     String?
+  nationality    String  @default("Moçambicana")
+  documentType   String?
+  documentNumber String?
+  nuit           String?
+  photoUrl       String?
+  address        String?
+  phone          String?
+  email          String?
+  notes          String? @db.Text
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school      School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user        User?             @relation(fields: [userId], references: [id])
+  guardians   StudentGuardian[]
+  enrollments Enrollment[]
+  documents   IssuedDocument[]
+
+  @@unique([schoolId, code])
+  /// Um User não pode ser dois alunos da mesma escola. NULLs continuam distintos em MySQL,
+  /// portanto muitos alunos sem conta continuam a ser permitidos — que é o caso normal.
+  @@unique([schoolId, userId])
+  @@index([schoolId, lastName, firstName])
+}
+
+model Guardian {
+  id       String  @id @default(cuid())
+  schoolId String
+  userId   String?
+
+  firstName      String
+  lastName       String
+  phone          String
+  altPhone       String?
+  email          String?
+  occupation     String?
+  address        String?
+  documentType   String?
+  documentNumber String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school   School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user     User?             @relation(fields: [userId], references: [id])
+  students StudentGuardian[]
+
+  @@unique([schoolId, userId])
+  @@index([schoolId, lastName, firstName])
+  @@index([schoolId, phone])
+}
+
+model StudentGuardian {
+  studentId  String
+  guardianId String
+
+  relationship GuardianRelationship
+  /// Contacto preferencial da escola.
+  isPrimary    Boolean              @default(false)
+  /// Responsável pelo pagamento das propinas.
+  isFinancialResponsible Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, guardianId])
+  @@index([guardianId])
+}
+
+model Teacher {
+  id       String  @id @default(cuid())
+  schoolId String
+  userId   String?
+
+  code      String
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+
+  documentNumber String?
+  nuit           String?
+  qualification  String?
+  hireDate       DateTime? @db.Date
+  /// Tempo lectivo máximo por semana, usado como aviso na atribuição de horário.
+  maxWeeklyHours Int?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school          School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user            User?           @relation(fields: [userId], references: [id])
+  teachingGroups  TeachingGroup[]
+  scheduleEntries ScheduleEntry[]
+  homeroomOf      ClassGroup[]    @relation("ClassGroupHeadTeacher")
+
+  @@unique([schoolId, code])
+  @@unique([schoolId, userId])
+  @@index([schoolId, lastName, firstName])
+}
+
+// ===========================================================================
+// ACADÉMICO — calendário e estrutura curricular
+// ===========================================================================
+
+enum TermStatus {
+  OPEN
+  CLOSED
+}
+
+enum SubjectScope {
+  /// Tronco Comum — toda a classe, independentemente da secção.
+  CORE
+  /// Secção — apenas os alunos do percurso (Ciências, Letras, …).
+  SECTION
+  /// Currículo Interno — oferta própria da escola.
+  INTERNAL
+}
+
+enum Shift {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+model AcademicYear {
+  id       String @id @default(cuid())
+  schoolId String
+
+  year      Int
+  label     String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+
+  isActive Boolean   @default(false)
+  closedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  terms              Term[]
+  studyPaths         StudyPath[]
+  classGroups        ClassGroup[]
+  enrollments        Enrollment[]
+  teachingGroups     TeachingGroup[]
+  assessmentSchemes  AssessmentScheme[]
+  timeSlots          TimeSlot[]
+  scheduleEntries    ScheduleEntry[]
+  feeSchedules       FeeSchedule[]
+
+  @@unique([schoolId, year])
+  @@index([schoolId, isActive])
+}
+
+/// Trimestre. Fechar um trimestre congela os TermResult calculados com o esquema vigente.
+model Term {
+  id             String @id @default(cuid())
+  schoolId       String
+  academicYearId String
+
+  sequence  Int
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+
+  status     TermStatus @default(OPEN)
+  closedAt   DateTime?
+  closedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  assessments  Assessment[]
+  termResults  TermResult[]
+  invoices     Invoice[]
+
+  @@unique([academicYearId, sequence])
+  @@index([schoolId, status])
+}
+
+/// Classe: 1ª a 12ª.
+model GradeLevel {
+  id       String @id @default(cuid())
+  schoolId String
+
+  code  String
+  name  String
+  order Int
+  cycle SchoolCycle
+
+  /// Classe com exame nacional (10ª, 12ª).
+  isExamLevel Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studyPaths        StudyPath[]
+  assessmentSchemes AssessmentScheme[]
+  feeSchedules      FeeSchedule[]
+
+  @@unique([schoolId, code])
+  @@index([schoolId, order])
+}
+
+/// Secção / área de estudo: Ciências, Letras, …
+model Section {
+  id       String @id @default(cuid())
+  schoolId String
+
+  code        String
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studyPaths StudyPath[]
+
+  @@unique([schoolId, code])
+}
+
+/// PERCURSO — classe + secção num ano lectivo. É daqui que saem as disciplinas do aluno,
+/// nunca da turma. Ver docs/specs/domain-foundation.md §4.2.
+model StudyPath {
+  id             String  @id @default(cuid())
+  schoolId       String
+  academicYearId String
+  gradeLevelId   String
+  /// Nulo nas classes sem secções (ensino primário e 1º ciclo).
+  sectionId      String?
+
+  /// Código gerado a partir de classe + secção; é este índice que garante a unicidade real,
+  /// porque `sectionId` nulável não é fiável num índice único em MySQL.
+  code String
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  gradeLevel         GradeLevel          @relation(fields: [gradeLevelId], references: [id])
+  section            Section?            @relation(fields: [sectionId], references: [id])
+  curriculumSubjects CurriculumSubject[]
+  enrollments        Enrollment[]
+  feeSchedules       FeeSchedule[]
+
+  @@unique([academicYearId, code])
+  @@unique([academicYearId, gradeLevelId, sectionId])
+  @@index([gradeLevelId])
+  @@index([sectionId])
+}
+
+model Subject {
+  id       String @id @default(cuid())
+  schoolId String
+
+  code      String
+  name      String
+  shortName String?
+  area      String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  curriculumSubjects CurriculumSubject[]
+  teachingGroups     TeachingGroup[]
+  assessmentSchemes  AssessmentScheme[]
+  termResults        TermResult[]
+
+  @@unique([schoolId, code])
+}
+
+/// Disciplina dentro de um percurso, com o seu âmbito e carga horária semanal.
+model CurriculumSubject {
+  id          String @id @default(cuid())
+  schoolId    String
+  studyPathId String
+  subjectId   String
+
+  scope       SubjectScope
+  weeklyHours Int          @default(0)
+  coefficient Decimal      @default(1) @db.Decimal(4, 2)
+  isExamSubject Boolean    @default(false)
+  order       Int          @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studyPath StudyPath @relation(fields: [studyPathId], references: [id], onDelete: Cascade)
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+
+  @@unique([studyPathId, subjectId])
+  @@index([schoolId, scope])
+  @@index([subjectId])
+}
+
+// ===========================================================================
+// ACADÉMICO — turmas, salas, matrículas, agrupamentos lectivos
+// ===========================================================================
+
+enum EnrollmentStatus {
+  ACTIVE
+  TRANSFERRED
+  WITHDRAWN
+  COMPLETED
+}
+
+enum RoomKind {
+  CLASSROOM
+  LABORATORY
+  WORKSHOP
+  AUDITORIUM
+  OTHER
+}
+
+/// TURMA — agrupamento administrativo. Pode conter matrículas de percursos diferentes
+/// (turmas mistas). NÃO determina as disciplinas do aluno.
+/// Exportada em src/types como alias `Classroom` (ver spec §4.1).
+model ClassGroup {
+  id             String @id @default(cuid())
+  schoolId       String
+  academicYearId String
+
+  name     String
+  shift    Shift
+  capacity Int    @default(0)
+
+  /// Sala habitual da turma. O horário pode usar outras.
+  homeRoomId    String?
+  /// Director de turma.
+  headTeacherId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school         School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  homeRoom       Room?           @relation(fields: [homeRoomId], references: [id])
+  headTeacher    Teacher?        @relation("ClassGroupHeadTeacher", fields: [headTeacherId], references: [id])
+  enrollments    Enrollment[]
+  teachingGroups TeachingGroup[]
+
+  @@unique([academicYearId, name])
+  @@index([schoolId, shift])
+  @@index([homeRoomId])
+  @@index([headTeacherId])
+}
+
+/// SALA física. Distinta de ClassGroup — o motor de horários precisa das duas.
+model Room {
+  id       String @id @default(cuid())
+  schoolId String
+
+  code     String
+  name     String
+  capacity Int      @default(0)
+  kind     RoomKind @default(CLASSROOM)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school          School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classGroups     ClassGroup[]
+  scheduleEntries ScheduleEntry[]
+
+  @@unique([schoolId, code])
+}
+
+/// MATRÍCULA — a entidade central. Liga aluno, ano lectivo, percurso e turma.
+/// Todas as notas, presenças e facturas apontam para a matrícula, não para o aluno.
+model Enrollment {
+  id             String @id @default(cuid())
+  schoolId       String
+  studentId      String
+  academicYearId String
+  studyPathId    String
+  classGroupId   String
+
+  number      String
+  status      EnrollmentStatus @default(ACTIVE)
+  isRepeating Boolean          @default(false)
+  enrolledAt  DateTime         @default(now())
+  closedAt    DateTime?
+  closedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school            School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student           Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear      AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  studyPath         StudyPath             @relation(fields: [studyPathId], references: [id])
+  classGroup        ClassGroup            @relation(fields: [classGroupId], references: [id])
+  teachingGroups    TeachingGroupMember[]
+  grades            Grade[]
+  termResults       TermResult[]
+  attendanceRecords AttendanceRecord[]
+  invoices          Invoice[]
+  cards             StudentCard[]
+  documents         IssuedDocument[]
+
+  @@unique([studentId, academicYearId])
+  @@unique([academicYearId, number])
+  @@index([schoolId, status])
+  @@index([classGroupId])
+  @@index([studyPathId])
+}
+
+/// AGRUPAMENTO LECTIVO — o conjunto efectivo de matrículas que assiste em conjunto a uma
+/// disciplina, com um professor. Aponta para `Subject` e NÃO para `CurriculumSubject`:
+/// num grupo de Tronco Comum os alunos vêm de percursos diferentes, logo de linhas de
+/// CurriculumSubject diferentes. Ver docs/specs/domain-foundation.md §4.3.
+model TeachingGroup {
+  id             String @id @default(cuid())
+  schoolId       String
+  academicYearId String
+  subjectId      String
+  teacherId      String?
+
+  name  String
+  scope SubjectScope
+
+  /// Preenchido quando o grupo corresponde exactamente a uma turma (caso Tronco Comum).
+  classGroupId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school             School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  subject            Subject               @relation(fields: [subjectId], references: [id])
+  teacher            Teacher?              @relation(fields: [teacherId], references: [id])
+  classGroup         ClassGroup?           @relation(fields: [classGroupId], references: [id])
+  members            TeachingGroupMember[]
+  assessments        Assessment[]
+  scheduleEntries    ScheduleEntry[]
+  attendanceSessions AttendanceSession[]
+
+  @@unique([academicYearId, name])
+  @@index([schoolId, teacherId])
+  @@index([subjectId])
+  @@index([classGroupId])
+}
+
+model TeachingGroupMember {
+  id              String @id @default(cuid())
+  teachingGroupId String
+  enrollmentId    String
+
+  addedAt DateTime @default(now())
+
+  teachingGroup TeachingGroup @relation(fields: [teachingGroupId], references: [id], onDelete: Cascade)
+  enrollment    Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([teachingGroupId, enrollmentId])
+  @@index([enrollmentId])
+}
+
+// ===========================================================================
+// AVALIAÇÃO — esquema configurável e notas
+// ===========================================================================
+
+enum AssessmentRegime {
+  WITH_ASSESSMENT
+  WITHOUT_ASSESSMENT
+}
+
+enum RoundingMode {
+  NONE
+  HALF_UP
+  HALF_DOWN
+  CEIL
+  FLOOR
+}
+
+enum ComponentType {
+  CONTINUOUS
+  TEST
+  PROJECT
+  PRACTICAL
+  ORAL
+}
+
+/// A FÓRMULA, em dados. Ex.: componentes AC (0.40) + AT (0.60).
+/// Resolução do esquema aplicável, do mais específico para o mais geral:
+/// (gradeLevel + subject) → (subject) → (gradeLevel) → base do ano.
+/// Um esquema publicado é imutável: alterar cria uma nova `version`.
+model AssessmentScheme {
+  id             String  @id @default(cuid())
+  schoolId       String
+  academicYearId String
+  gradeLevelId   String?
+  subjectId      String?
+
+  name    String
+  version Int    @default(1)
+
+  regime        AssessmentRegime @default(WITH_ASSESSMENT)
+  scaleMin      Decimal          @default(0) @db.Decimal(5, 2)
+  scaleMax      Decimal          @default(20) @db.Decimal(5, 2)
+  passMark      Decimal          @default(10) @db.Decimal(5, 2)
+  roundingMode  RoundingMode     @default(HALF_UP)
+  decimalPlaces Int              @default(2)
+
+  // --- POR CONFIRMAR (spec §4.4): derivados de um modelo de ensino superior, não de
+  // prática de ensino secundário validada. Nulos = regra desligada no motor.
+  /// O exame pesa FORA da média das componentes.
+  hasExam         Boolean  @default(false)
+  examWeight      Decimal  @default(0) @db.Decimal(5, 4)
+  /// Nota de frequência mínima para ser admitido a exame.
+  minGradeForExam Decimal? @db.Decimal(5, 2)
+  /// Média a partir da qual o aluno dispensa o exame.
+  exemptionGrade  Decimal? @db.Decimal(5, 2)
+  /// Nota mínima no próprio exame.
+  minExamGrade    Decimal? @db.Decimal(5, 2)
+  // --- fim POR CONFIRMAR
+
+  publishedAt DateTime?
+  notes       String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school       School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear          @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  gradeLevel   GradeLevel?           @relation(fields: [gradeLevelId], references: [id])
+  subject      Subject?              @relation(fields: [subjectId], references: [id])
+  components   AssessmentComponent[]
+  termResults  TermResult[]
+
+  /// Garantia REAL de unicidade: todas as colunas são não-nuláveis. O índice seguinte só
+  /// protege os âmbitos totalmente preenchidos — com `gradeLevelId` e `subjectId` a NULL,
+  /// que é precisamente o caso do esquema base do ano, o MySQL aceitaria duplicados
+  /// ilimitados e a resolução "mais específico → mais geral" deixaria de ser determinística.
+  @@unique([academicYearId, name, version])
+  @@unique([academicYearId, gradeLevelId, subjectId, version])
+  @@index([schoolId, academicYearId])
+  @@index([gradeLevelId])
+  @@index([subjectId])
+}
+
+model AssessmentComponent {
+  id       String @id @default(cuid())
+  schemeId String
+
+  code String
+  name String
+  type ComponentType @default(TEST)
+
+  /// Os pesos dos componentes de um esquema somam exactamente 1.0000.
+  weight   Decimal  @db.Decimal(5, 4)
+  /// Nota mínima neste componente; abaixo dela reprova mesmo com média positiva.
+  minGrade Decimal? @db.Decimal(5, 2)
+  order    Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scheme      AssessmentScheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  assessments Assessment[]
+
+  @@unique([schemeId, code])
+  @@index([schemeId, order])
+}
+
+/// Uma avaliação concreta (um teste, um trabalho) dentro de um componente.
+model Assessment {
+  id              String @id @default(cuid())
+  schoolId        String
+  teachingGroupId String
+  termId          String
+  componentId     String
+
+  name        String
+  maxScore    Decimal  @default(20) @db.Decimal(5, 2)
+  /// Peso desta avaliação dentro do seu componente, quando o componente tem várias.
+  weight      Decimal  @default(1) @db.Decimal(5, 4)
+  date        DateTime @db.Date
+  publishedAt DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school        School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teachingGroup TeachingGroup       @relation(fields: [teachingGroupId], references: [id], onDelete: Cascade)
+  term          Term                @relation(fields: [termId], references: [id])
+  component     AssessmentComponent @relation(fields: [componentId], references: [id])
+  grades        Grade[]
+
+  @@index([schoolId, termId])
+  @@index([teachingGroupId, termId])
+  @@index([componentId])
+}
+
+model Grade {
+  id           String @id @default(cuid())
+  schoolId     String
+  assessmentId String
+  enrollmentId String
+
+  /// Nulo quando o aluno faltou (`isAbsent`) ou a nota ainda não foi lançada.
+  score    Decimal? @db.Decimal(5, 2)
+  isAbsent Boolean  @default(false)
+  note     String?
+
+  recordedById String?
+  recordedAt   DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, enrollmentId])
+  @@index([schoolId])
+  @@index([enrollmentId])
+}
+
+/// Resultado calculado e materializado. Guarda a VERSÃO do esquema usada, para que
+/// reconfigurar a fórmula não reescreva o histórico.
+model TermResult {
+  id           String @id @default(cuid())
+  schoolId     String
+  enrollmentId String
+  subjectId    String
+  termId       String
+
+  schemeId      String
+  schemeVersion Int
+
+  /// Médias por componente: { "AC": 14.5, "AT": 12.0 }
+  componentAverages Json
+  average           Decimal? @db.Decimal(5, 2)
+  examScore         Decimal? @db.Decimal(5, 2)
+  finalScore        Decimal? @db.Decimal(5, 2)
+
+  isExempt         Boolean  @default(false)
+  isAdmittedToExam Boolean  @default(true)
+  passed           Boolean?
+
+  computedAt DateTime @default(now())
+
+  school     School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollment Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  subject    Subject          @relation(fields: [subjectId], references: [id])
+  term       Term             @relation(fields: [termId], references: [id])
+  scheme     AssessmentScheme @relation(fields: [schemeId], references: [id])
+
+  @@unique([enrollmentId, subjectId, termId])
+  @@index([schoolId, termId])
+  @@index([subjectId])
+  @@index([schemeId])
+}
+
+// ===========================================================================
+// HORÁRIOS
+// ===========================================================================
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+/// Tempo lectivo. `startTime`/`endTime` em "HH:mm" — ver nota 5 no topo do ficheiro.
+model TimeSlot {
+  id             String @id @default(cuid())
+  schoolId       String
+  academicYearId String
+
+  dayOfWeek DayOfWeek
+  startTime String
+  endTime   String
+  shift     Shift
+  order     Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  scheduleEntries    ScheduleEntry[]
+  attendanceSessions AttendanceSession[]
+
+  @@unique([academicYearId, dayOfWeek, startTime, shift])
+  @@index([schoolId, dayOfWeek])
+}
+
+/// Uma aula no horário. Dois dos três conflitos possíveis são impedidos por índice único;
+/// o terceiro — aluno com duas aulas em simultâneo — não é exprimível como índice, porque
+/// uma matrícula pertence a vários agrupamentos. Fica em detectScheduleConflicts().
+/// Ver docs/specs/domain-foundation.md §4.5.
+model ScheduleEntry {
+  id              String @id @default(cuid())
+  schoolId        String
+  academicYearId  String
+  teachingGroupId String
+  teacherId       String
+  roomId          String
+  timeSlotId      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  teachingGroup      TeachingGroup       @relation(fields: [teachingGroupId], references: [id], onDelete: Cascade)
+  teacher            Teacher             @relation(fields: [teacherId], references: [id])
+  room               Room                @relation(fields: [roomId], references: [id])
+  timeSlot           TimeSlot            @relation(fields: [timeSlotId], references: [id])
+  attendanceSessions AttendanceSession[]
+
+  @@unique([academicYearId, teacherId, timeSlotId])
+  @@unique([academicYearId, roomId, timeSlotId])
+  @@unique([academicYearId, teachingGroupId, timeSlotId])
+  @@index([schoolId])
+  @@index([teachingGroupId])
+}
+
+// ===========================================================================
+// PRESENÇAS
+// ===========================================================================
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum AttendanceSessionStatus {
+  DRAFT
+  SUBMITTED
+}
+
+/// Uma aula concreta. Abre com todos presentes; o professor só alterna as excepções.
+model AttendanceSession {
+  id              String  @id @default(cuid())
+  schoolId        String
+  teachingGroupId String
+  scheduleEntryId String?
+  timeSlotId      String?
+
+  date   DateTime                @db.Date
+  status AttendanceSessionStatus @default(DRAFT)
+  note   String?
+
+  takenById String?
+  takenAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school        School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teachingGroup TeachingGroup      @relation(fields: [teachingGroupId], references: [id], onDelete: Cascade)
+  scheduleEntry ScheduleEntry?     @relation(fields: [scheduleEntryId], references: [id])
+  timeSlot      TimeSlot?          @relation(fields: [timeSlotId], references: [id])
+  records       AttendanceRecord[]
+
+  @@unique([teachingGroupId, date, timeSlotId])
+  @@index([schoolId, date])
+  @@index([scheduleEntryId])
+  @@index([timeSlotId])
+}
+
+model AttendanceRecord {
+  id           String @id @default(cuid())
+  sessionId    String
+  enrollmentId String
+
+  status      AttendanceStatus @default(PRESENT)
+  minutesLate Int?
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session    AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  enrollment Enrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, enrollmentId])
+  @@index([enrollmentId, status])
+}
+
+// ===========================================================================
+// FINANÇAS
+// ===========================================================================
+
+enum FeeRecurrence {
+  MONTHLY
+  TERM
+  ANNUAL
+  ONE_OFF
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_DEPOSIT
+  BANK_TRANSFER
+  MOBILE_MONEY
+}
+
+enum PaymentProvider {
+  MPESA
+  EMOLA
+  MKESH
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  CONFIRMED
+  FAILED
+  REVERSED
+}
+
+model FeeSchedule {
+  id             String  @id @default(cuid())
+  schoolId       String
+  academicYearId String
+  gradeLevelId   String?
+  studyPathId    String?
+
+  name     String
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  gradeLevel   GradeLevel?  @relation(fields: [gradeLevelId], references: [id])
+  studyPath    StudyPath?   @relation(fields: [studyPathId], references: [id])
+  items        FeeItem[]
+
+  @@index([schoolId, academicYearId])
+  @@index([gradeLevelId])
+  @@index([studyPathId])
+}
+
+model FeeItem {
+  id            String @id @default(cuid())
+  schoolId      String
+  feeScheduleId String
+
+  code          String
+  name          String
+  amount        Decimal       @db.Decimal(12, 2)
+  recurrence    FeeRecurrence
+  dueDayOfMonth Int?
+  isMandatory   Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school      School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  feeSchedule FeeSchedule   @relation(fields: [feeScheduleId], references: [id], onDelete: Cascade)
+  invoiceLines InvoiceLine[]
+
+  @@unique([feeScheduleId, code])
+  @@index([schoolId])
+}
+
+model Invoice {
+  id           String  @id @default(cuid())
+  schoolId     String
+  enrollmentId String
+  termId       String?
+
+  reference   String
+  periodYear  Int?
+  periodMonth Int?
+
+  issuedAt DateTime @default(now())
+  dueDate  DateTime @db.Date
+
+  subtotal   Decimal @default(0) @db.Decimal(12, 2)
+  discount   Decimal @default(0) @db.Decimal(12, 2)
+  total      Decimal @default(0) @db.Decimal(12, 2)
+  paidAmount Decimal @default(0) @db.Decimal(12, 2)
+  currency   String  @default("MZN")
+
+  status      InvoiceStatus @default(PENDING)
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school     School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollment Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  term       Term?         @relation(fields: [termId], references: [id])
+  lines      InvoiceLine[]
+  payments   Payment[]
+
+  @@unique([schoolId, reference])
+  @@index([schoolId, status, dueDate])
+  @@index([enrollmentId])
+  @@index([termId])
+}
+
+model InvoiceLine {
+  id        String  @id @default(cuid())
+  invoiceId String
+  feeItemId String?
+
+  description String
+  quantity    Int     @default(1)
+  unitAmount  Decimal @db.Decimal(12, 2)
+  amount      Decimal @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeItem FeeItem? @relation(fields: [feeItemId], references: [id])
+
+  @@index([invoiceId])
+  @@index([feeItemId])
+}
+
+/// `idempotencyKey` é obrigatório e único: os callbacks de dinheiro móvel repetem-se, e
+/// sem isto um pagamento é contado duas vezes.
+model Payment {
+  id        String @id @default(cuid())
+  schoolId  String
+  invoiceId String
+
+  amount   Decimal @db.Decimal(12, 2)
+  currency String  @default("MZN")
+
+  method            PaymentMethod
+  provider          PaymentProvider?
+  providerReference String?
+  payerPhone        String?
+
+  status         PaymentStatus @default(INITIATED)
+  idempotencyKey String        @unique
+  rawPayload     Json?
+  failureReason  String?
+  confirmedAt    DateTime?
+  reversedAt     DateTime?
+
+  initiatedById String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, status])
+  @@index([invoiceId])
+  @@index([providerReference])
+}
+
+// ===========================================================================
+// IDENTIDADE DIGITAL — cartões e documentos
+// ===========================================================================
+
+enum CardStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum DocumentType {
+  ENROLLMENT_DECLARATION
+  ATTENDANCE_DECLARATION
+  GRADE_TRANSCRIPT
+  COMPLETION_CERTIFICATE
+  TRANSFER_CERTIFICATE
+}
+
+/// O QR codifica `qrToken` (aleatório), nunca o id do aluno — um cartão perdido não deve
+/// revelar identificadores internos nem permitir enumeração.
+model StudentCard {
+  id           String @id @default(cuid())
+  schoolId     String
+  enrollmentId String
+
+  serial   String @unique
+  qrToken  String @unique
+  version  Int    @default(1)
+
+  issuedAt      DateTime   @default(now())
+  expiresAt     DateTime
+  status        CardStatus @default(ACTIVE)
+  revokedAt     DateTime?
+  revokedReason String?
+
+  issuedById String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, status])
+  @@index([enrollmentId])
+}
+
+/// Certificados e declarações emitidos. `payload` guarda um instantâneo dos dados no
+/// momento da emissão — reemitir o documento anos depois deve devolver o mesmo conteúdo.
+model IssuedDocument {
+  id           String  @id @default(cuid())
+  schoolId     String
+  studentId    String
+  enrollmentId String?
+
+  type             DocumentType
+  reference        String
+  verificationCode String       @unique
+  payload          Json
+
+  issuedById String?
+  issuedAt   DateTime  @default(now())
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  /// Restrict, não Cascade: um certificado é registo com valor legal e deve sobreviver ao
+  /// apagamento do registo do aluno. Apagar um aluno com documentos emitidos é bloqueado.
+  student    Student     @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment Enrollment? @relation(fields: [enrollmentId], references: [id])
+
+  @@unique([schoolId, reference])
+  @@index([schoolId, type])
+  @@index([studentId])
+  @@index([enrollmentId])
+}
+
+// ===========================================================================
+// AUDITORIA
+// ===========================================================================
+
+/// Obrigatório em alterações de nota, matrícula e pagamento. Uma nota que muda sem rasto
+/// não é defensável perante uma direcção.
+model AuditLog {
+  id       String  @id @default(cuid())
+  schoolId String?
+
+  actorUserId String?
+  action      String
+  entity      String
+  entityId    String
+
+  before Json?
+  after  Json?
+
+  ip        String?
+  userAgent String?
+  at        DateTime @default(now())
+
+  school School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, entity, entityId])
+  @@index([actorUserId])
+  @@index([at])
+}

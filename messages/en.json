@@ -1,0 +1,171 @@
+{
+  "app": {
+    "name": "EduMoz",
+    "title": "EduMoz — School management for Mozambique",
+    "titleTemplate": "{page} · EduMoz",
+    "description": "School management platform bringing students, classes, grades, attendance and tuition together in one place."
+  },
+  "common": {
+    "skipToContent": "Skip to main content",
+    "requestDemo": "Request a demo",
+    "homeAriaLabel": "EduMoz, home page",
+    "language": "Language",
+    "changeLanguage": "Change language",
+    "theme": {
+      "toLight": "Switch to light theme",
+      "toDark": "Switch to dark theme"
+    }
+  },
+  "nav": {
+    "primary": "Main navigation",
+    "primaryMobile": "Main navigation (mobile)",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "home": "Home",
+    "designSystem": "Design system",
+    "students": "Students"
+  },
+  "home": {
+    "badge": "Built for Mozambican schools",
+    "heading": "The front office, the classroom and the treasury in one place",
+    "lead": "EduMoz brings enrolment, attendance, assessment and tuition into one platform that school leadership, teachers and guardians use every day.",
+    "exploreDesignSystem": "Explore the design system",
+    "assurances": {
+      "slowConnections": "Works on slow connections",
+      "consent": "Data hosted with the school's consent",
+      "language": "Mozambican Portuguese"
+    },
+    "preview": {
+      "classTitle": "Class 8B",
+      "classSubtitle": "Roll call, 16 August",
+      "done": "Roll call complete",
+      "status": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent"
+      }
+    },
+    "indicators": {
+      "heading": "What leadership sees first thing in the morning",
+      "enrolled": {
+        "label": "Enrolled students",
+        "detail": "12 active classes"
+      },
+      "attendance": {
+        "label": "Attendance today",
+        "detail": "Recorded by 10am"
+      },
+      "fees": {
+        "label": "Tuition settled",
+        "detail": "Current term"
+      },
+      "reports": {
+        "label": "Reports closed",
+        "detail": "2nd term"
+      }
+    },
+    "steps": {
+      "heading": "How it works",
+      "register": {
+        "title": "Register the school",
+        "description": "Classes, teachers and students imported from a spreadsheet or entered directly."
+      },
+      "daily": {
+        "title": "Record the everyday",
+        "description": "Attendance, grades and incidents recorded by teachers on any device."
+      },
+      "follow": {
+        "title": "Track and communicate",
+        "description": "Report sheets, tuition summaries and guardian updates in one place."
+      }
+    },
+    "closing": {
+      "heading": "Want to see EduMoz with your school's data?",
+      "body": "We'll book a 30-minute session and walk through the full flow, from enrolment to the report sheet."
+    }
+  },
+  "footer": {
+    "tagline": "School management built for Mozambican schools.",
+    "links": "Footer links",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "copyright": "© {year} EduMoz. All rights reserved."
+  },
+  "designSystem": {
+    "title": "Design system"
+  },
+  "dataTable": {
+    "search": "Search",
+    "searchPlaceholder": "Search…",
+    "columns": "Columns",
+    "toggleColumns": "Show or hide columns",
+    "loading": "Loading…",
+    "empty": "No records",
+    "emptyHint": "There is nothing to show here yet.",
+    "noMatches": "No results for “{query}”",
+    "noMatchesHint": "Check the spelling or clear the search.",
+    "clearSearch": "Clear search",
+    "error": "The data could not be loaded",
+    "retry": "Try again",
+    "selected": "{count, plural, =0 {No rows selected} one {# row selected} other {# rows selected}}",
+    "selectAll": "Select all rows",
+    "selectRow": "Select row",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
+    "clearSort": "Clear sorting",
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {page} of {total}",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page"
+  },
+  "form": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "required": "Required field",
+    "selectPlaceholder": "Select an option",
+    "genericError": "Could not save. Please try again.",
+    "optional": "(optional)"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInTitle": "Sign in to EduMoz",
+    "signInSubtitle": "Use your school account.",
+    "withGoogle": "Continue with Google",
+    "or": "or",
+    "identifier": "Email or phone",
+    "identifierHint": "Students and guardians can use their phone number.",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "signOut": "Sign out",
+    "failed": "Could not sign in. Check your details and try again.",
+    "noAccess": "This account has no access to any school. Ask school leadership for an invitation.",
+    "school": "School",
+    "changeSchool": "Change school"
+  },
+  "students": {
+    "title": "Students",
+    "subtitle": "{count, plural, =0 {No enrolled students} one {# enrolled student} other {# enrolled students}} in {year}.",
+    "tableLabel": "Student list",
+    "empty": "No students enrolled yet",
+    "emptyHint": "Enrolments appear here as soon as they are recorded.",
+    "columns": {
+      "number": "No.",
+      "name": "Name",
+      "classGroup": "Class",
+      "studyPath": "Study path",
+      "gender": "Gender",
+      "birthDate": "Date of birth",
+      "guardian": "Guardian"
+    },
+    "gender": {
+      "MALE": "Male",
+      "FEMALE": "Female"
+    },
+    "noGuardian": "Not recorded"
+  }
+}

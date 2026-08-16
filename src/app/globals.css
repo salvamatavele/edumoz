@@ -1,26 +1,228 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   EduMoz design tokens — see docs/specs/design-system.md
+   Style: Soft UI Evolution. Light-first, dark theme opt-in via [data-theme].
+   ========================================================================== */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Brand — decorative only (3:1 territory) */
+  --edu-brand: #0d9488;
+
+  /* Interactive surfaces and link text */
+  --edu-primary: #0f766e;
+  --edu-primary-hover: #115e59;
+  --edu-on-primary: #ffffff;
+
+  /* Call to action */
+  --edu-accent: #b45309;
+  --edu-accent-hover: #92400e;
+  --edu-on-accent: #ffffff;
+
+  /* Neutrals */
+  --edu-background: #f0fdfa;
+  --edu-surface: #ffffff;
+  --edu-surface-raised: #ffffff;
+  --edu-foreground: #134e4a;
+  --edu-muted: #e8f1f4;
+  --edu-muted-foreground: #4b6360;
+  --edu-border: #cce9e4;
+  --edu-border-strong: #6e9a94;
+  --edu-ring: #0d9488;
+
+  /* Semantic states */
+  --edu-success: #15803d;
+  --edu-success-surface: #dcfce7;
+  --edu-warning: #b45309;
+  --edu-warning-surface: #fef3c7;
+  /* #dc2626 fails AA on the destructive surface (3.95:1); #b91c1c gives 5.3:1 */
+  --edu-destructive: #b91c1c;
+  --edu-destructive-surface: #fee2e2;
+  --edu-on-status: #ffffff;
+
+  /* Elevation — softer than flat, clearer than neumorphism */
+  --edu-shadow-sm: 0 1px 2px rgb(19 78 74 / 0.06);
+  --edu-shadow-md: 0 2px 4px rgb(19 78 74 / 0.06), 0 4px 12px rgb(19 78 74 / 0.08);
+  --edu-shadow-lg: 0 4px 8px rgb(19 78 74 / 0.06), 0 12px 28px rgb(19 78 74 / 0.12);
+  --edu-shadow-xl: 0 8px 16px rgb(19 78 74 / 0.08), 0 24px 48px rgb(19 78 74 / 0.16);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --edu-brand: #2dd4bf;
+
+  --edu-primary: #2dd4bf;
+  --edu-primary-hover: #5eead4;
+  --edu-on-primary: #062521;
+
+  --edu-accent: #f59e0b;
+  --edu-accent-hover: #fbbf24;
+  --edu-on-accent: #0b1f1d;
+
+  --edu-background: #0b1f1d;
+  --edu-surface: #122a28;
+  --edu-surface-raised: #17332f;
+  --edu-foreground: #e6f5f2;
+  --edu-muted: #17332f;
+  --edu-muted-foreground: #9db5b1;
+  --edu-border: #1f3f3b;
+  --edu-border-strong: #608b84;
+  --edu-ring: #2dd4bf;
+
+  --edu-success: #4ade80;
+  --edu-success-surface: #16321f;
+  --edu-warning: #fbbf24;
+  --edu-warning-surface: #33260c;
+  --edu-destructive: #f87171;
+  --edu-destructive-surface: #3a1a1a;
+  --edu-on-status: #0b1f1d;
+
+  --edu-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --edu-shadow-md: 0 2px 4px rgb(0 0 0 / 0.35), 0 4px 12px rgb(0 0 0 / 0.45);
+  --edu-shadow-lg: 0 4px 8px rgb(0 0 0 / 0.35), 0 12px 28px rgb(0 0 0 / 0.5);
+  --edu-shadow-xl: 0 8px 16px rgb(0 0 0 / 0.4), 0 24px 48px rgb(0 0 0 / 0.55);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Colors */
+  --color-brand: var(--edu-brand);
+  --color-primary: var(--edu-primary);
+  --color-primary-hover: var(--edu-primary-hover);
+  --color-on-primary: var(--edu-on-primary);
+  --color-accent: var(--edu-accent);
+  --color-accent-hover: var(--edu-accent-hover);
+  --color-on-accent: var(--edu-on-accent);
+  --color-background: var(--edu-background);
+  --color-surface: var(--edu-surface);
+  --color-surface-raised: var(--edu-surface-raised);
+  --color-foreground: var(--edu-foreground);
+  --color-muted: var(--edu-muted);
+  --color-muted-foreground: var(--edu-muted-foreground);
+  --color-border: var(--edu-border);
+  --color-border-strong: var(--edu-border-strong);
+  --color-ring: var(--edu-ring);
+  --color-success: var(--edu-success);
+  --color-success-surface: var(--edu-success-surface);
+  --color-warning: var(--edu-warning);
+  --color-warning-surface: var(--edu-warning-surface);
+  --color-destructive: var(--edu-destructive);
+  --color-destructive-surface: var(--edu-destructive-surface);
+  --color-on-status: var(--edu-on-status);
+
+  /* ------------------------------------------------------------------------
+     Ponte para o vocabulário do shadcn/ui.
+     Os componentes do shadcn referem tokens com nomes próprios; em vez de trazerem
+     a paleta deles, apontam para a nossa — já validada para WCAG AA na Fase 1.
+
+     A tradução mais importante é `--color-input`: o shadcn usa `border-input` nos
+     contornos de campo, e é aí que tem de entrar `--edu-border-strong` (3.1:1) e não
+     `--edu-border` (1.2:1, decorativo). Com o mapeamento ingénuo, todos os campos de
+     formulário falhariam o critério de 3:1 do WCAG para elementos de interface.
+
+     NOTA: `accent` NÃO está aqui. No shadcn, `bg-accent` é a superfície de hover de
+     menus e listas; no EduMoz, `accent` é o âmbar da chamada para acção. Mapear um no
+     outro pintaria cada item de menu de âmbar. Ver a nota em src/components/ui/README.
+     ------------------------------------------------------------------------ */
+  --color-primary-foreground: var(--edu-on-primary);
+  --color-secondary: var(--edu-muted);
+  --color-secondary-foreground: var(--edu-foreground);
+  --color-card: var(--edu-surface);
+  --color-card-foreground: var(--edu-foreground);
+  --color-popover: var(--edu-surface-raised);
+  --color-popover-foreground: var(--edu-foreground);
+  --color-input: var(--edu-border-strong);
+  --color-destructive-foreground: var(--edu-on-status);
+
+  /* Typography */
+  --font-heading: var(--font-lexend), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.55;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.45;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.35;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 1.25;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 1.15;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1.08;
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Elevation */
+  --shadow-sm: var(--edu-shadow-sm);
+  --shadow-md: var(--edu-shadow-md);
+  --shadow-lg: var(--edu-shadow-lg);
+  --shadow-xl: var(--edu-shadow-xl);
+
+  /* Motion — dial 4/10: standard, restrained */
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.011em;
+    text-wrap: balance;
+  }
+
+  /* Consistent, always-visible keyboard focus */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Tabular figures wherever numbers line up in columns */
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

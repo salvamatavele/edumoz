@@ -1,0 +1,171 @@
+{
+  "app": {
+    "name": "EduMoz",
+    "title": "EduMoz — Gestão escolar para Moçambique",
+    "titleTemplate": "{page} · EduMoz",
+    "description": "Plataforma de gestão escolar que reúne alunos, turmas, notas, presenças e propinas num único lugar."
+  },
+  "common": {
+    "skipToContent": "Saltar para o conteúdo principal",
+    "requestDemo": "Pedir demonstração",
+    "homeAriaLabel": "EduMoz, página inicial",
+    "language": "Língua",
+    "changeLanguage": "Mudar de língua",
+    "theme": {
+      "toLight": "Activar tema claro",
+      "toDark": "Activar tema escuro"
+    }
+  },
+  "nav": {
+    "primary": "Navegação principal",
+    "primaryMobile": "Navegação principal (móvel)",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "home": "Início",
+    "designSystem": "Sistema de design",
+    "students": "Alunos"
+  },
+  "home": {
+    "badge": "Feito para escolas moçambicanas",
+    "heading": "A secretaria, a sala de aula e a tesouraria no mesmo sítio",
+    "lead": "O EduMoz reúne matrículas, presenças, avaliações e propinas numa plataforma que a direcção, os professores e os encarregados de educação usam todos os dias.",
+    "exploreDesignSystem": "Explorar o sistema de design",
+    "assurances": {
+      "slowConnections": "Funciona em ligações lentas",
+      "consent": "Dados alojados com consentimento da escola",
+      "language": "Português de Moçambique"
+    },
+    "preview": {
+      "classTitle": "Turma 8.ª B",
+      "classSubtitle": "Chamada de 16 de Agosto",
+      "done": "Chamada concluída",
+      "status": {
+        "present": "Presente",
+        "late": "Atrasado",
+        "absent": "Falta"
+      }
+    },
+    "indicators": {
+      "heading": "O que a direcção vê logo pela manhã",
+      "enrolled": {
+        "label": "Alunos matriculados",
+        "detail": "12 turmas activas"
+      },
+      "attendance": {
+        "label": "Presenças de hoje",
+        "detail": "Registadas até às 10h"
+      },
+      "fees": {
+        "label": "Propinas liquidadas",
+        "detail": "Trimestre em curso"
+      },
+      "reports": {
+        "label": "Pautas fechadas",
+        "detail": "2.º trimestre"
+      }
+    },
+    "steps": {
+      "heading": "Como funciona",
+      "register": {
+        "title": "Registe a escola",
+        "description": "Turmas, professores e alunos importados de uma folha de cálculo ou inseridos directamente."
+      },
+      "daily": {
+        "title": "Lance o dia-a-dia",
+        "description": "Presenças, notas e ocorrências registadas pelos professores em qualquer dispositivo."
+      },
+      "follow": {
+        "title": "Acompanhe e comunique",
+        "description": "Pautas, mapas de propinas e informação aos encarregados de educação num só lugar."
+      }
+    },
+    "closing": {
+      "heading": "Quer ver o EduMoz com os dados da sua escola?",
+      "body": "Marcamos uma sessão de 30 minutos e mostramos o fluxo completo, da matrícula à pauta."
+    }
+  },
+  "footer": {
+    "tagline": "Gestão escolar feita para as escolas moçambicanas.",
+    "links": "Ligações do rodapé",
+    "privacy": "Privacidade",
+    "terms": "Termos",
+    "copyright": "© {year} EduMoz. Todos os direitos reservados."
+  },
+  "designSystem": {
+    "title": "Sistema de design"
+  },
+  "dataTable": {
+    "search": "Procurar",
+    "searchPlaceholder": "Procurar…",
+    "columns": "Colunas",
+    "toggleColumns": "Mostrar ou esconder colunas",
+    "loading": "A carregar…",
+    "empty": "Sem registos",
+    "emptyHint": "Ainda não há nada para mostrar aqui.",
+    "noMatches": "Nenhum resultado para «{query}»",
+    "noMatchesHint": "Verifique a escrita ou limpe a pesquisa.",
+    "clearSearch": "Limpar pesquisa",
+    "error": "Não foi possível carregar os dados",
+    "retry": "Tentar de novo",
+    "selected": "{count, plural, =0 {Nenhuma linha seleccionada} one {# linha seleccionada} other {# linhas seleccionadas}}",
+    "selectAll": "Seleccionar todas as linhas",
+    "selectRow": "Seleccionar linha",
+    "sortAscending": "Ordenar de forma crescente",
+    "sortDescending": "Ordenar de forma decrescente",
+    "clearSort": "Remover ordenação",
+    "rowsPerPage": "Linhas por página",
+    "pageOf": "Página {page} de {total}",
+    "firstPage": "Primeira página",
+    "previousPage": "Página anterior",
+    "nextPage": "Página seguinte",
+    "lastPage": "Última página"
+  },
+  "form": {
+    "save": "Guardar",
+    "saving": "A guardar…",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "required": "Campo obrigatório",
+    "selectPlaceholder": "Seleccione uma opção",
+    "genericError": "Não foi possível guardar. Tente de novo.",
+    "optional": "(opcional)"
+  },
+  "auth": {
+    "signIn": "Entrar",
+    "signInTitle": "Entrar no EduMoz",
+    "signInSubtitle": "Aceda com a conta da sua escola.",
+    "withGoogle": "Continuar com Google",
+    "or": "ou",
+    "identifier": "E-mail ou telemóvel",
+    "identifierHint": "Alunos e encarregados de educação podem usar o número de telemóvel.",
+    "password": "Palavra-passe",
+    "submit": "Entrar",
+    "submitting": "A entrar…",
+    "signOut": "Terminar sessão",
+    "failed": "Não foi possível entrar. Verifique os dados e tente de novo.",
+    "noAccess": "Esta conta não tem acesso a nenhuma escola. Peça um convite à direcção.",
+    "school": "Escola",
+    "changeSchool": "Mudar de escola"
+  },
+  "students": {
+    "title": "Alunos",
+    "subtitle": "{count, plural, =0 {Sem alunos matriculados} one {# aluno matriculado} other {# alunos matriculados}} em {year}.",
+    "tableLabel": "Lista de alunos",
+    "empty": "Ainda não há alunos matriculados",
+    "emptyHint": "As matrículas aparecem aqui assim que forem registadas.",
+    "columns": {
+      "number": "N.º",
+      "name": "Nome",
+      "classGroup": "Turma",
+      "studyPath": "Percurso",
+      "gender": "Sexo",
+      "birthDate": "Data de nascimento",
+      "guardian": "Encarregado de educação"
+    },
+    "gender": {
+      "MALE": "Masculino",
+      "FEMALE": "Feminino"
+    },
+    "noGuardian": "Sem registo"
+  }
+}
