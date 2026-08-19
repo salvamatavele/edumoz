@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 
 import { Logo } from "@/components/layout/logo";
 import { Link } from "@/i18n/navigation";
-import type { AppPathname } from "@/i18n/routing";
+import type { StaticAppPathname } from "@/i18n/routing";
 
-const FOOTER_LINKS: ReadonlyArray<{ href: AppPathname; key: string }> = [
+const FOOTER_LINKS: ReadonlyArray<{ href: StaticAppPathname; key: string }> = [
   { href: "/design-system", key: "nav.designSystem" },
   { href: "/", key: "footer.privacy" },
   { href: "/", key: "footer.terms" },

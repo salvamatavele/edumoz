@@ -5,7 +5,13 @@ import { AssessmentRegime, ComponentType, RoundingMode } from "@/types";
 import { Decimal } from "@/features/shared/domain/numeric";
 
 import type { AssessmentComponentDefinition, GradeEntry } from "./assessment";
-import { baseScheme, computeSubjectResult, validateScheme } from "./grade-engine";
+import {
+  baseScheme,
+  computeSubjectResult,
+  resolveApplicableScheme,
+  validateScheme,
+  type SchemeScope,
+} from "./grade-engine";
 
 const d = (value: string) => new Decimal(value);
 
@@ -344,5 +350,50 @@ describe("computeSubjectResult — exame", () => {
     expect(result.isAdmittedToExam).toBe(true);
     expect(result.finalScore?.toString()).toBe("5");
     expect(result.passed).toBe(false);
+  });
+});
+
+describe("resolveApplicableScheme", () => {
+  interface Candidate extends SchemeScope {
+    readonly id: string;
+  }
+
+  const base: Candidate = { id: "base", gradeLevelId: null, subjectId: null };
+  const byGradeLevel: Candidate = { id: "grade-10", gradeLevelId: "grade-10", subjectId: null };
+  const bySubject: Candidate = { id: "math", gradeLevelId: null, subjectId: "math" };
+  const bySpecific: Candidate = { id: "grade-10-math", gradeLevelId: "grade-10", subjectId: "math" };
+
+  const target = { gradeLevelId: "grade-10", subjectId: "math" };
+
+  it("prefere o esquema com classe e disciplina, quando existe", () => {
+    const result = resolveApplicableScheme([base, byGradeLevel, bySubject, bySpecific], target);
+    expect(result?.id).toBe("grade-10-math");
+  });
+
+  it("cai para o esquema só de disciplina, sem o específico", () => {
+    const result = resolveApplicableScheme([base, byGradeLevel, bySubject], target);
+    expect(result?.id).toBe("math");
+  });
+
+  it("cai para o esquema só de classe, sem o de disciplina", () => {
+    const result = resolveApplicableScheme([base, byGradeLevel], target);
+    expect(result?.id).toBe("grade-10");
+  });
+
+  it("cai para o esquema base do ano, sem nenhum específico", () => {
+    const result = resolveApplicableScheme([base], target);
+    expect(result?.id).toBe("base");
+  });
+
+  it("devolve null quando não há nenhum esquema aplicável", () => {
+    const result = resolveApplicableScheme([byGradeLevel], { gradeLevelId: "grade-11", subjectId: "math" });
+    expect(result).toBeNull();
+  });
+
+  it("não confunde o esquema de outra classe/disciplina com o de secção geral", () => {
+    const otherGradeLevel: Candidate = { id: "grade-11", gradeLevelId: "grade-11", subjectId: null };
+    const otherSubject: Candidate = { id: "physics", gradeLevelId: null, subjectId: "physics" };
+    const result = resolveApplicableScheme([otherGradeLevel, otherSubject], target);
+    expect(result).toBeNull();
   });
 });

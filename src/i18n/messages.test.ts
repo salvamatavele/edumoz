@@ -72,6 +72,12 @@ describe("catálogos de mensagens", () => {
       "app.name",
       "app.titleTemplate",
       "common.language",
+      "nav.portal",
+      "teachingStaff.teachers.columns.email",
+      "teachingStaff.teachers.create.fields.email",
+      "assessmentSchemes.columns.regime",
+      "assessmentSchemes.componentType.ORAL",
+      "assessmentSchemes.create.fields.regime",
     ]);
 
     const untranslated = flatten(pt as Tree).filter((key) => {

@@ -1,12 +1,14 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getPathname } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 
 /**
  * Formulário de início de sessão.
@@ -21,13 +23,18 @@ import { Input } from "@/components/ui/input";
  */
 export function SignInForm() {
   const t = useTranslations("auth");
+  const locale = useLocale() as Locale;
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(
     searchParams.get("error") ? t("failed") : null,
   );
 
-  const callbackUrl = searchParams.get("continuar") ?? "/";
+  // Sem `?continuar=`, aterra em `/alunos` (ou `/portal`, se `/alunos` reencaminhar um
+  // papel de família — ver docs/specs/role-shell.md) em vez da página pública. Quem chega
+  // aqui já quer entrar na aplicação, não voltar à montra.
+  const callbackUrl =
+    searchParams.get("continuar") ?? getPathname({ locale, href: "/students" });
 
   function handleCredentials(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

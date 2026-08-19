@@ -1,15 +1,19 @@
 import { hasLocale } from "next-intl";
 import { getRequestConfig } from "next-intl/server";
 
+import { formats, TIME_ZONE } from "./formats";
 import { LOCALE_TAGS, routing } from "./routing";
 
 /**
  * Configuração por pedido: mensagens e formatos da língua activa.
  *
- * Os formatos vivem aqui e não espalhados pelos componentes. Uma data escrita à mão como
- * `${dia}/${mês}/${ano}` fica errada em inglês, e uma quantia escrita com `toFixed(2)`
- * perde o separador de milhares e o símbolo da moeda. Centralizar é o que garante que
- * 21600 aparece como "21 600,00 MT" em português e "MTn 21,600.00" em inglês.
+ * Os formatos vivem em `./formats` e não espalhados pelos componentes. `locale` fica no
+ * código curto ("pt"/"en") de propósito — é o MESMO valor que o next-intl usa para gerar
+ * URLs (`Link`, `usePathname`, `routing.pathnames`). Passar aqui o tag completo (`pt-MZ`,
+ * `en-GB`) partiria a navegação: um `Link` para `/design-system` passaria a resolver para
+ * `/pt-MZ/design-system`, que não existe em `routing.pathnames`. A formatação de datas com
+ * o tag completo (o que corrige "en" a ser tratado como "en-US") vive à parte, em
+ * `./use-locale-formatter`, precisamente para não interferir com o encaminhamento.
  */
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
@@ -20,27 +24,8 @@ export default getRequestConfig(async ({ requestLocale }) => {
   return {
     locale,
     messages: (await import(`../../messages/${locale}.json`)).default,
-    formats: {
-      dateTime: {
-        short: { day: "2-digit", month: "2-digit", year: "numeric" },
-        long: { day: "numeric", month: "long", year: "numeric" },
-        weekday: { weekday: "long" },
-      },
-      number: {
-        currency: {
-          style: "currency",
-          currency: "MZN",
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        },
-        // Notas: sempre duas casas, para uma pauta alinhar em coluna.
-        score: { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-        percent: { style: "percent", maximumFractionDigits: 0 },
-      },
-    },
-    // O tag completo (pt-MZ, en-GB) decide separadores e nomes de meses; o código curto
-    // decide apenas qual o ficheiro de mensagens.
-    timeZone: "Africa/Maputo",
+    formats,
+    timeZone: TIME_ZONE,
     now: new Date(),
     getMessageFallback({ namespace, key }) {
       const path = [namespace, key].filter(Boolean).join(".");

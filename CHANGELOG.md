@@ -2,6 +2,375 @@
 
 ## [Não publicado]
 
+## Fase 10 — Horários: montagem, conflitos, consulta e impressão
+
+Change (OpenSpec): [`openspec/changes/scheduling-module/`](openspec/changes/scheduling-module/).
+
+### Adicionado
+
+- **Salas e tempos lectivos** — nenhum dos dois tinha CRUD (descoberto ao ler o schema,
+  mesmo padrão do `Assessment` em `assessment-grading`); novos separadores em
+  `/academico`, mesmo molde de `GradeLevel`/`Section`.
+- **`/horarios` (gestor)** — grelha de montagem por turma, professor ou sala. Colocar uma
+  aula (agrupamento + sala + tempo) verifica os quatro conflitos possíveis — professor,
+  sala, agrupamento (também protegidos por índice único) e **aluno** (só verificável no
+  domínio, porque uma matrícula pertence a vários agrupamentos ao mesmo tempo) — com
+  `conflictsForPlacement` (já existia, testada, nunca usada até agora) a correr no
+  cliente para resposta imediata e outra vez no servidor, sobre o horário recarregado,
+  antes de gravar. `STUDENT_DOUBLE_BOOKED` mostra contagem de alunos, nunca nomes.
+  Excesso de `Teacher.maxWeeklyHours` é aviso, nunca bloqueio.
+- **`/meu-horario`** — consulta do próprio horário (professor, aluno, encarregado de
+  educação), grelha num ecrã largo e lista empilhada por dia num telemóvel, sem scroll
+  horizontal.
+- **Impressão do horário de uma turma**, a partir de `/horarios`.
+- Vinte e cinco testes novos entre domínio, dados, acções e componentes.
+
+### Decisões
+
+- **Duas capabilities, não uma** — `timetable-authoring` (gestor) e `timetable-viewing`
+  (professor/aluno) — mesma separação de `assessment-grading` entre lançamento e
+  consulta: autorizações diferentes, ritmos de mudança diferentes.
+- **A verificação de conflitos corre sempre duas vezes, com a MESMA função pura** — nunca
+  duas implementações da detecção. O servidor nunca confia no "sem conflitos" do cliente;
+  recarrega o horário actual antes de gravar. Os três índices únicos ficam como rede de
+  segurança final contra condições de corrida, nunca a primeira linha de defesa.
+
+### Corrigido durante a verificação manual
+
+- `ScheduleView` (grelha de consulta/impressão) colapsava para uma só aula quando duas
+  aulas simultâneas de subgrupos diferentes caíam na mesma célula — exactamente o caso de
+  uma turma mista com Secções em paralelo, o cenário central deste módulo. Só apareceu ao
+  testar com dados reais (Física de Ciências e História de Letras ao mesmo tempo), nunca
+  nos testes unitários com fixtures mais simples.
+- O aviso de `maxWeeklyHours` que `placeScheduleEntry` já devolvia nunca chegava a
+  aparecer na grelha de montagem — `ScheduleBoard` ganhou um banner próprio.
+
+## Fase 9 — Permissões: superadmin real, papéis configuráveis, director de turma
+
+Change (OpenSpec): [`openspec/changes/permissions-management/`](openspec/changes/permissions-management/).
+
+### Adicionado
+
+- **`isPlatformAdmin` passa a chegar à sessão de facto.** `User.isPlatformAdmin` já existia
+  e era lido em `sign-in.ts`, mas nunca chegava ao `SessionContext` — 23 sítios no código
+  construíam-no com `isPlatformAdmin: false` à mão, porque o JWT nunca o carregava. Corrigido
+  na origem (`jwt`/`session` callbacks, `src/lib/auth/config.ts`) e nos 19 sítios que
+  restavam depois de excluir os dois ficheiros de teste com fixtures intencionais.
+- Selector de escola (`SchoolSwitcher`) passa a listar TODAS as escolas activas para um
+  administrador da plataforma — antes só mostrava as suas `Membership`s, e um superadmin
+  sem nenhuma ficava sem forma de escolher uma escola para gerir, apesar de
+  `resolveActiveSchool` já aceitar o pedido. `resolveActiveSchool` ganhou um parâmetro
+  `isPlatformAdmin` que salta a verificação de `Membership`.
+- **Papéis configuráveis por escola** (`PermissionRole`/`RolePermission`, sobre um catálogo
+  fixo `Permission` de nove recursos × quatro acções) — um gestor sem restrição pode criar
+  papéis como "Director-adjunto" e escolher, por recurso, o que cada um vê/cria/edita/apaga,
+  e atribuí-los a outros gestores. Nova secção em `/configuracao`. `hasPermission(context,
+  resource, action)` (`access.ts`) é o mecanismo — aditivo, ao lado de
+  `isSchoolAdministrator`, sem alterar nenhuma das 16 Server Actions existentes: continuam a
+  usar a autorização de sempre, e um gestor sem papel atribuído mantém acesso total.
+- **Director de turma.** `ClassGroup.headTeacherId` (já existia no esquema, nunca lido)
+  passa a expor-se na criação/edição de turmas e a alargar a LEITURA de presenças e notas ao
+  professor que dirige a turma, mesmo em disciplinas que não lecciona — nunca a escrita, que
+  continua limitada a quem lecciona. UI distingue "os seus agrupamentos" de "a turma que
+  dirige" com um emblema, e a grelha de notas mostra os campos bloqueados com uma explicação
+  quando vistos por posse alargada, não por leccionar.
+
+### Decisões
+
+- **Catálogo de recursos/acções fixo no código, não editável pelo superadmin** — um
+  superadmin escolhe combinações, nunca inventa capacidades novas sem correspondência real
+  no código.
+- **Migração das 16 Server Actions existentes para `hasPermission` fica para quando houver
+  um papel configurável real a precisar dela** — reescrever autorização em bloco é o
+  projecto mais arriscado de fazer sem motivo concreto.
+
+## Fase 8 — Avaliação: lançamento de notas, fecho de trimestre, pautas
+
+Change (OpenSpec): [`openspec/changes/assessment-grading/`](openspec/changes/assessment-grading/).
+
+### Adicionado
+
+- `resolveApplicableScheme` (`grade-engine.ts`) — a resolução "qual esquema se aplica a
+  esta classe+disciplina" que a capability `assessment-schemes` já especificava mas nunca
+  tinha implementação. Reutilizada tanto pelo lançamento de notas como pelo fecho de
+  trimestre — uma só função, nunca duas regras a divergir.
+- `/notas` (professor) — cria avaliações concretas (testes, trabalhos) dentro de um
+  componente do esquema, e lança notas numa grelha com a média calculada ao vivo pelo
+  mesmo motor (`computeSubjectResult`) que o fecho de trimestre usa para gravar. As
+  `SubjectResult.notes` do motor aparecem em texto legível junto da média.
+- `closeTerm` — fecha um trimestre: materializa `TermResult` para cada matrícula ×
+  disciplina do seu percurso, com `schemeId`+`schemeVersion` congelados no resultado.
+  Só `isSchoolAdministrator`, numa única transacção, com ecrã de confirmação explícito
+  (secção "Fecho de trimestre" em `/avaliacao`) — sem forma de reabrir nesta fase.
+- `/pautas` — pauta por turma, disciplina e trimestre, lida exclusivamente de `TermResult`
+  (nunca recalcula a partir de `Grade`/`Assessment`).
+- `/portal` deixou de estar vazio — aluno vê "as minhas notas"; encarregado de educação
+  com mais do que um educando escolhe qual ver. Nunca as notas de outro aluno.
+- Dez testes novos por ficheiro em média, cobrindo autorização, `resolveApplicableScheme`
+  (as quatro combinações de especificidade), fecho de trimestre e a leitura do portal.
+
+### Decisões
+
+- **Nota de exame (`examScore`) fica fora de âmbito.** Os campos de exame do esquema
+  continuam por confirmar com uma escola real; `computeSubjectResult` já trata
+  `examScore: null` como "pendente", não "reprovado", quando `hasExam` está desligado.
+- **`Assessment` (a avaliação concreta) também é criada pelo professor — lacuna descoberta
+  ao implementar.** A proposta original assumia `Assessment`s já existentes para a grelha
+  listar; `Assessment.weight` já mostrava que o schema foi pensado para várias avaliações
+  por componente. Ver `openspec/changes/assessment-grading/design.md`.
+- **Fechar um trimestre é a única acção sob `isSchoolAdministrator` deste módulo** — o
+  lançamento de notas usa a mesma autorização por posse do `TeachingGroup` que Presenças já
+  estabeleceu, mas fechar afecta toda a escola de uma vez.
+
+## Fase 7 — Configuração académica
+
+Change (OpenSpec): [`openspec/changes/academic-configuration/`](openspec/changes/academic-configuration/).
+
+### Adicionado
+
+- `/academico`, `/professores`, `/avaliacao` (gestor apenas) — Estrutura académica
+  (`GradeLevel`, `Section`, `StudyPath`, `Subject`, `CurriculumSubject`, `ClassGroup`),
+  Professores (`Teacher`, `TeachingGroup`) e Avaliação (`AssessmentScheme` +
+  `AssessmentComponent`), cada uma com a sua própria entrada na barra lateral e separadores
+  (`Tabs`) internos. Fecha a lacuna que impedia Presenças (Fase 6) de sair do modo de
+  demonstração — até aqui, toda esta taxonomia só existia via `prisma/seed.ts`.
+- `/configuracao` mantém-se, reservada à configuração real do sistema (nome, logótipo,
+  fórmulas de pagamento da escola) — ainda por construir; mostra um estado vazio explícito.
+- Dez Server Actions novas, mesmo molde de `create-student.ts`/`enroll-student.ts`:
+  `create-grade-level`, `create-section`, `create-study-path`, `create-subject`,
+  `create-curriculum-subject`, `create-class-group`, `create-teacher`,
+  `create-teaching-group`, `create-assessment-scheme`. Todas só `isSchoolAdministrator` —
+  ao contrário de `submit-attendance.ts`, nenhuma sob o professor dono: configurar a
+  estrutura académica é uma decisão de gestão, não de sala de aula.
+- `create-assessment-scheme.ts` chama `validateScheme` (`grade-engine.ts`, já existente e
+  testado) depois do Zod, e antes de gravar — os pesos dos componentes têm de somar
+  exactamente 1.0000, com o erro específico mapeado para o formulário.
+- `EntitySection` (`features/academic/ui/settings/entity-section.tsx`) — secção genérica
+  (tabela + `FormModal`), reutilizada pelas oito entidades de campos simples; poupa repetir
+  a mesma composição oito vezes.
+- `AssessmentSchemeSection`/`AssessmentSchemeForm` — a única entidade cuja forma
+  ("esquema + lista de componentes") o `FormModal` genérico não cobre; usa
+  `useFieldArray` directamente, com o mesmo esquema Zod e a mesma Server Action.
+- Selectores dependentes (`StudyPath`→`GradeLevel`, `CurriculumSubject`→`StudyPath`+
+  `Subject`, `TeachingGroup`→`Subject`+`Teacher`) mostram "crie X primeiro" em vez de um
+  selector vazio, quando a lista de opções está vazia.
+
+### Corrigido
+
+- **Campos numéricos opcionais enviavam `NaN`, não `undefined`, quando deixados em
+  branco.** `input.valueAsNumber` (usado por `register(name, {valueAsNumber:true})` em
+  `FormModal`) devolve `NaN` para um campo vazio, não `undefined` — `z.coerce.number()`
+  sozinho não apanha isto, porque `NaN` já é um número válido para o Zod, só não um valor
+  útil. Descoberto ao verificar `Teacher.maxWeeklyHours` manualmente. Corrigido com
+  `optionalNumberField` (`components/form/field-schema.ts`), que converte
+  `NaN`/`""`/`null` para `undefined` antes da validação — aplica-se a qualquer campo
+  numérico opcional futuro, não só aos desta fase.
+
+### Decisões
+
+- **Revertida após feedback do utilizador: em vez de uma só página "Configuração" com
+  nove tabelas empilhadas, cada área (Estrutura académica, Professores, Avaliação) ganhou a
+  sua própria página e entrada na barra lateral, com separadores internos.** A versão
+  inicial (uma entrada, várias secções) parecia uma parede de tabelas, e a maior parte do
+  conteúdo não era "configuração do sistema" — era gestão de dados académicos do dia-a-dia.
+  Ver `openspec/changes/academic-configuration/design.md` (secção "Correcção
+  (pós-implementação)").
+- **`StudyPath.code` nunca vem do formulário — gera-se a partir de classe + secção.** É
+  este código, não `sectionId` (nulável), que garante a unicidade real no MySQL.
+- **`CurriculumSubject.scope` cobre "extracurricular" via `INTERNAL`** — sem enum novo nem
+  migração.
+
+## Fase 6 — Presenças
+
+Change (OpenSpec): [`openspec/changes/attendance/`](openspec/changes/attendance/).
+Spec: [`docs/specs/attendance.md`](docs/specs/attendance.md).
+
+### Adicionado
+
+- `features/academic/domain/attendance.ts` — `computeAttendanceSummary` (faltas por
+  disciplina, não por dia), `isExcludedByAbsences` (regra por confirmar, recebida como
+  argumento), `todaysDayOfWeek` (usa `getUTCDay()`, não o fuso do servidor). Puras, 10
+  testes.
+- `features/academic/data/attendance.ts` — `findTeacherByUserId` (primeira ponte sessão →
+  perfil profissional), `listTeacherScheduleForDate` (a partir de `ScheduleEntry`, nunca
+  uma escolha livre), `getAttendanceRoster`, `getAttendanceReport`,
+  `listAttendanceReportFilters`.
+- `submitAttendance` e `reopenAttendance` — Server Actions, terceiro e quarto molde do
+  padrão (`create-student.ts`, `enroll-student.ts`): autorização por dono da
+  `ScheduleEntry` (não `isSchoolAdministrator`), escrita transaccional do delta,
+  `AuditLog`. 9 testes.
+- `/presencas` (professor: agrupamentos do dia, folha de marcação com toque único por
+  aluno) e `/turmas/assiduidade` (gestor: mapa por turma/período/disciplina).
+- `(dashboard)/layout.tsx` — `navItems` passa a resolver por papel concreto:
+  `TEACHER` → "Presenças"; `SCHOOL_MANAGER`/`PLATFORM_ADMIN` → "Alunos" + "Assiduidade".
+
+### Decisões
+
+- **A lista "de hoje" sai do horário real (`ScheduleEntry`), não de uma escolha livre.**
+  Além de corresponder ao que RF-04 pede (só os agrupamentos do professor), dá à sessão um
+  `timeSlotId` real — sem ele, o índice único `(teachingGroupId, date, timeSlotId)` não
+  protegia nada, porque no MySQL um `timeSlotId` nulo nunca colide consigo próprio.
+- **`useState`, não `useOptimistic`, para o estado da folha.** A proposta original previa
+  `useOptimistic`; um teste de componente apanhou que ele reverte para a base assim que a
+  transição termina, porque alternar não chama o servidor — não serve para acumular várias
+  alternâncias antes de um submeter explícito. Ver `openspec/changes/attendance/design.md`.
+- **Reabrir aceita dois donos: o gestor OU o próprio professor.** Um gestor tem de
+  conseguir corrigir um erro sem depender do professor estar disponível; o professor
+  continua a poder corrigir a sua própria sessão sozinho. Submeter continua restrito ao
+  professor dono — um gestor não marca presenças em nome de outro.
+- **A regra de exclusão por faltas fica configurável, o número por confirmar.** Varia por
+  escola e disciplina em Moçambique; fixá-la no código exigiria uma migração para a
+  corrigir. `isExcludedByAbsences` recebe a regra como argumento.
+
+## Fase 5 — Casca de navegação e autorização por papel
+
+Spec: [`docs/specs/role-shell.md`](docs/specs/role-shell.md).
+
+### Adicionado
+
+- `isStaffRole` (`src/features/identity/domain/access.ts`) — complemento exacto de
+  `isFamilyRole` para os cinco papéis actuais; usado para restringir LEITURA, não só
+  escrita.
+- `/portal` — destino de aluno/encarregado de educação, protegido como `/alunos`
+  (`PROTECTED_PATHNAMES`), ainda vazio de propósito.
+- `/alunos` reencaminha um papel de família para `/portal` em vez de mostrar a escola
+  inteira.
+- **Casca do painel** (`DashboardShell`, `src/components/layout/dashboard-shell.tsx`) —
+  barra lateral com navegação por papel, gaveta em ecrãs pequenos, cabeçalho utilitário
+  (`SchoolSwitcher`/`LocaleSwitcher`/`ThemeToggle`), cartão do utilizador com terminar
+  sessão, rodapé mínimo. Substitui por completo `SiteHeader`/`SiteFooter` (a montra
+  pública) depois de entrar, via route groups do Next.js
+  (`(marketing)/`, `(dashboard)/`) — os URLs não mudam.
+- Ligação "Entrar" no cabeçalho de marketing, antes inexistente — não havia nenhuma forma
+  de chegar a `/entrar` a partir da navegação pública.
+- Botão de mostrar/esconder no campo de palavra-passe (`Input`, `type="password"`).
+
+### Decisões
+
+- **Corrige uma fuga real, não só a falta de painel.** `/alunos` só verificava
+  `session.schoolId`; qualquer papel de família autenticado via a lista completa da
+  escola — nomes, datas de nascimento, encarregados de outros alunos.
+  `isSchoolAdministrator` só protegia as acções de escrita.
+- **Sem rota-gateway nova.** `/students` continua a ser o destino de `callbackUrl` por
+  omissão (agora `getPathname`-traduzido, não `/`) nos dois métodos de login; é a própria
+  página que decide mostrar a lista ou reencaminhar, no servidor. Funciona igual para
+  Google, que não permite decidir o destino do lado do cliente antes de autenticar.
+- **Trocar de escola já reencaminha sozinho.** Um utilizador com papel diferente em cada
+  escola perde o acesso a `/alunos` ao trocar, sem código extra — consequência de `/alunos`
+  verificar o papel a cada render, não um requisito à parte.
+- **A navegação por papel acabou na barra lateral do painel, não no cabeçalho de
+  marketing.** A primeira versão pusera "Alunos"/"Portal" como ligações condicionais no
+  `SiteHeader` — tecnicamente correcto, mas continuava a parecer a montra pública com dois
+  botões a mais, não um painel administrativo. `SiteHeader` voltou a ser só a montra;
+  `DashboardShell` é a casca a sério de quem entrou. Ver `docs/specs/role-shell.md` §3.4.
+- **Um componente de ícone não atravessa a fronteira Server → Client como prop.** O Next.js
+  recusa em runtime — `navItems` calculado em `(dashboard)/layout.tsx` (servidor) só leva
+  `{ href, label }`; `DashboardShell` resolve o ícone do lado do cliente a partir do `href`.
+- **`setRequestLocale` tem de ser chamado em cada layout que usa traduções, não só na
+  página.** Separar a casca de marketing para `(marketing)/layout.tsx` fez `/`,
+  `/design-system` e `/sign-in` perderem a pré-renderização estática, sem aviso do build —
+  faltava chamar `setRequestLocale` nesse layout também, porque é ele quem renderiza
+  `SiteFooter` (que usa `getTranslations()`). Ver `docs/specs/role-shell.md` §3.5.
+
+## Fase 4 — Ecrã de matrículas
+
+Change (OpenSpec): [`openspec/changes/enrollment-screen/`](openspec/changes/enrollment-screen/).
+
+### Adicionado
+
+- Secção "Por matricular" em `/alunos`, visível a `SCHOOL_MANAGER`, listando alunos
+  (`Student`) da escola sem `Enrollment` no ano lectivo activo —
+  `listUnenrolledStudents` (`src/features/academic/data/enrollments.ts`).
+- Server Action `enrollStudent`
+  (`src/features/academic/actions/enroll-student.ts`), segundo molde do padrão
+  estabelecido por `create-student.ts`: autorização, `enrollStudentSchema` (Zod,
+  partilhado com o `FormModal`), escrita transaccional de `Enrollment` + `AuditLog`,
+  `fieldErrors` por campo, `revalidatePath` das duas línguas.
+- `listEnrollmentOptions` — turmas e percursos do ano activo, mais o número de matrícula
+  sugerido (`{ano}/{sequência}`, mesma convenção do `prisma/seed.ts`), pré-preenchido mas
+  editável.
+- `suggestEnrollmentNumber` (`src/features/academic/domain/enrollment-number.ts`) — função
+  pura, testada isoladamente.
+
+### Decisões
+
+- **Fecha uma lacuna documentada na Fase 3**: `create-student` criava o `Student` mas
+  `/alunos` lista por `Enrollment` — um aluno criado ficava invisível até alguém o
+  matricular, e nada fazia isso. Ver "Problema conhecido" na Fase 3, abaixo.
+- **Segunda secção na mesma página, não uma rota nova.** Evita duplicar a resolução de
+  "que alunos, que escola" que `/alunos` já faz, e mantém o modelo de um só ecrã que
+  `create-student` já tinha estabelecido. Ver `openspec/changes/enrollment-screen/design.md`
+  para as alternativas consideradas.
+- **`academicYearId` resolvido no servidor, nunca vindo do cliente** — mesma razão que
+  `create-student` resolve `schoolId` a partir da sessão: um ano a fechar entre o modal
+  abrir e submeter não deve poder ser escolhido pelo formulário.
+- **`P2002` do `@prisma/adapter-mariadb` não preenche `error.meta.target`** — ao
+  contrário do que a documentação do Prisma assume. O nome do índice vem em
+  `meta.driverAdapterError.cause.constraint.index`. Sem isto, `enroll-student` não
+  conseguia distinguir "número de matrícula repetido" de "aluno já matriculado" — os dois
+  violam índices únicos diferentes na mesma escrita. Centralizado em
+  `uniqueConstraintTarget` (`src/lib/db/errors.ts`), para o próximo módulo com mais do que
+  uma restrição única não repetir a descoberta.
+
+## Fase 3 — Fecho da fundação
+
+Spec: [`docs/specs/pending-fixes.md`](docs/specs/pending-fixes.md).
+
+### Adicionado
+
+- `SchoolSwitcher` (`src/components/layout/school-switcher.tsx`) — só aparece a quem tem
+  mais do que uma `Membership`; troca a escola activa via `useSession().update()`.
+- `<SessionProvider>` em `src/app/[locale]/layout.tsx`, sem prop `session`, e ligação
+  "Alunos" na navegação condicional a `status === "authenticated"`.
+- `resolveActiveSchool` (`src/features/identity/domain/access.ts`) — validação pura da
+  troca de escola contra as `Membership` do token, extraída do `jwt` callback.
+- Primeira Server Action do projecto: `createStudent`
+  (`src/features/academic/actions/create-student.ts`), o molde dos módulos seguintes —
+  autorização com `isSchoolAdministrator`, `createStudentSchema` (Zod, partilhado com o
+  `FormModal`), escrita transaccional de `Student` + `AuditLog`, `fieldErrors.code` num
+  número de aluno repetido, `revalidatePath` das duas línguas.
+- Correcção do defeito de datas em inglês: `src/i18n/use-locale-formatter.ts`
+  (`useLocaleFormatter`) formata com o tag completo (`LOCALE_TAGS[locale]`, `en-GB`),
+  usando `Intl` directamente; formatos extraídos para `src/i18n/formats.ts`, partilhados
+  com `request.ts` e `src/test/intl.tsx`.
+
+### Decisões
+
+- **A lógica de troca de escola vive em `access.ts`, não no callback `jwt`.** Importar
+  `src/lib/auth/config.ts` (que chama `NextAuth()`) rebenta sob Vitest — arrasta
+  `next/server`, que o runtime de teste não resolve fora do Next. Isolar a validação como
+  função pura é o que a torna testável, e é consistente com `sign-in-policy.ts`.
+- **O cabeçalho lê a sessão do lado do cliente.** `src/app/[locale]/layout.tsx` continua
+  estático (`generateStaticParams`); chamar `auth()` aí tornaria toda a aplicação dinâmica,
+  já que o projecto não tem PPR configurado. `/design-system` e `/` continuam
+  pré-renderizadas; só `/alunos`, que já usava `auth()`, é dinâmica.
+- **`getTranslations`, `getPathname` e `revalidatePath` são mockados nos testes da Server
+  Action.** Fora do runtime do Next, `getTranslations` resolve para o build de cliente e
+  lança; `getPathname` (via `next-intl/navigation`) arrasta `next/navigation`, que o Vitest
+  não resolve; `revalidatePath` exige uma loja de geração estática que só existe num pedido
+  real. Os três mocks isolam o que interessa testar — autorização, validação e a escrita
+  transaccional — sem tentar simular o runtime do Next.
+- **A formatação de datas em inglês não podia viver no `locale` que `getRequestConfig`
+  devolve.** A primeira tentativa devolveu o tag completo (`LOCALE_TAGS[locale]`,
+  `en-GB`) directamente em `request.ts`. Corrigiu a ordem dia/mês, mas partiu a
+  navegação: o `useFormatter()` do next-intl usa o MESMO `locale` para formatar e para
+  gerar `href`s (`Link`, `usePathname`), e `routing.pathnames` só conhece "pt"/"en" — um
+  `Link` para "/design-system" passou a resolver `/pt-MZ/design-system`, que não existe.
+  `locale` em `request.ts` voltou ao código curto, e `useLocaleFormatter`
+  (`src/i18n/use-locale-formatter.ts`) ficou responsável só pela formatação, com `Intl`
+  directamente e o tag completo — sem tocar no `locale` que o encaminhamento lê.
+
+### Problema conhecido
+
+- **Um aluno criado por `create-student` não aparece em `/alunos` sem matrícula.** A lista
+  parte da `Enrollment` do ano lectivo activo (`listEnrolledStudents`, ver Fase 2 Passo 7),
+  não do `Student`. `create-student` é deliberadamente só o molde do padrão de mutação — o
+  spec (`pending-fixes.md`) não incluía campos de matrícula (turma, percurso, número) no
+  esquema, e adicioná-los agora exigiria selectores de `ClassGroup`/`StudyPath` fora do
+  âmbito aprovado. O critério de aceitação "a lista actualiza" só se verifica, por agora,
+  criando também uma `Enrollment` — o que fica para o ecrã de matrículas.
+  **Fechado na Fase 4** (`enrollment-screen`).
+
 ## Fase 2 — Fundação de domínio
 
 Spec: [`docs/specs/domain-foundation.md`](docs/specs/domain-foundation.md).

@@ -26,14 +26,16 @@ const eslintConfig = defineConfig([
     //
     // A autenticação é a terceira excepção, e por uma razão estrutural: ela ACONTECE
     // ANTES DE HAVER ESCOLA. Descobrir a que escolas um e-mail pertence é precisamente a
-    // pergunta que o `getTenantDb(schoolId)` já pressupõe respondida. Estes dois ficheiros
-    // são o único sítio onde essa consulta sem filtro é legítima, e não fazem mais nada.
+    // pergunta que o `getTenantDb(schoolId)` já pressupõe respondida. `platform-schools.ts`
+    // é a mesma excepção ao contrário: lista TODAS as escolas para um administrador da
+    // plataforma escolher uma — não há ainda escola nenhuma para `getTenantDb` filtrar.
     ignores: [
       "src/lib/db/**",
       "src/generated/**",
       "src/types/**",
       "src/lib/auth/**",
       "src/features/identity/data/sign-in.ts",
+      "src/features/identity/data/platform-schools.ts",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [

@@ -14,7 +14,11 @@
     "theme": {
       "toLight": "Activar tema claro",
       "toDark": "Activar tema escuro"
-    }
+    },
+    "forbidden": "Não tem permissão para esta acção",
+    "createMissingDependency": "Crie {entity} primeiro",
+    "noneOption": "Nenhuma (geral)",
+    "noActiveYear": "Não há um ano lectivo activo"
   },
   "nav": {
     "primary": "Navegação principal",
@@ -23,7 +27,18 @@
     "closeMenu": "Fechar menu",
     "home": "Início",
     "designSystem": "Sistema de design",
-    "students": "Alunos"
+    "students": "Alunos",
+    "portal": "Portal",
+    "attendance": "Presenças",
+    "attendanceReport": "Assiduidade",
+    "academic": "Académico",
+    "teachers": "Professores",
+    "assessment": "Avaliação",
+    "settings": "Configuração",
+    "grades": "Notas",
+    "reportCards": "Pautas",
+    "timetables": "Horários",
+    "myTimetable": "O meu horário"
   },
   "home": {
     "badge": "Feito para escolas moçambicanas",
@@ -128,10 +143,13 @@
     "required": "Campo obrigatório",
     "selectPlaceholder": "Seleccione uma opção",
     "genericError": "Não foi possível guardar. Tente de novo.",
-    "optional": "(opcional)"
+    "optional": "(opcional)",
+    "showPassword": "Mostrar palavra-passe",
+    "hidePassword": "Esconder palavra-passe"
   },
   "auth": {
     "signIn": "Entrar",
+    "goToDashboard": "Ir para o painel",
     "signInTitle": "Entrar no EduMoz",
     "signInSubtitle": "Aceda com a conta da sua escola.",
     "withGoogle": "Continuar com Google",
@@ -166,6 +184,822 @@
       "MALE": "Masculino",
       "FEMALE": "Feminino"
     },
-    "noGuardian": "Sem registo"
+    "noGuardian": "Sem registo",
+    "create": {
+      "trigger": "Adicionar aluno",
+      "title": "Novo aluno",
+      "description": "O número de aluno tem de ser único na escola.",
+      "fields": {
+        "code": "Número de aluno",
+        "firstName": "Nome próprio",
+        "lastName": "Apelido",
+        "birthDate": "Data de nascimento",
+        "gender": "Sexo",
+        "phone": "Telefone"
+      }
+    },
+    "form": {
+      "errors": {
+        "code": "Indique o número de aluno",
+        "firstName": "Indique o nome próprio",
+        "lastName": "Indique o apelido",
+        "birthDate": "Indique uma data de nascimento válida",
+        "gender": "Seleccione o sexo",
+        "phone": "Indique um telefone válido",
+        "forbidden": "Não tem permissão para adicionar alunos",
+        "duplicateCode": "Já existe um aluno com este número"
+      }
+    },
+    "enroll": {
+      "sectionTitle": "Por matricular",
+      "sectionSubtitle": "{count, plural, one {# aluno criado ainda sem matrícula neste ano lectivo} other {# alunos criados ainda sem matrícula neste ano lectivo}}.",
+      "tableLabel": "Lista de alunos por matricular",
+      "empty": "Não há alunos por matricular",
+      "trigger": "Matricular",
+      "title": "Matricular {name}",
+      "description": "A turma e o percurso têm de ser do ano lectivo activo.",
+      "columns": {
+        "actions": "Acções"
+      },
+      "fields": {
+        "classGroupId": "Turma",
+        "studyPathId": "Percurso",
+        "number": "Número de matrícula"
+      },
+      "errors": {
+        "studentId": "Aluno inválido",
+        "classGroupId": "Seleccione a turma",
+        "studyPathId": "Seleccione o percurso",
+        "number": "Indique o número de matrícula",
+        "forbidden": "Não tem permissão para matricular alunos",
+        "duplicateNumber": "Já existe uma matrícula com este número neste ano lectivo",
+        "alreadyEnrolled": "Este aluno já está matriculado no ano lectivo activo",
+        "noActiveYear": "Não há um ano lectivo activo para matricular"
+      }
+    }
+  },
+  "portal": {
+    "title": "Bem-vindo ao EduMoz",
+    "comingSoon": "As suas funcionalidades chegam nos próximos módulos.",
+    "grades": {
+      "title": "As minhas notas",
+      "child": "Educando",
+      "view": "Ver",
+      "noAccess": "Ainda não há notas para mostrar.",
+      "empty": "Ainda não há trimestres fechados com notas publicadas.",
+      "term": "Trimestre",
+      "subject": "Disciplina",
+      "average": "Média",
+      "finalScore": "Nota final",
+      "situation": "Situação",
+      "pending": "Pendente",
+      "passed": "Aprovado",
+      "failed": "Reprovado"
+    }
+  },
+  "roles": {
+    "PLATFORM_ADMIN": "Administrador da plataforma",
+    "SCHOOL_MANAGER": "Gestor",
+    "TEACHER": "Professor",
+    "STUDENT": "Aluno",
+    "GUARDIAN": "Encarregado de educação"
+  },
+  "attendance": {
+    "title": "Presenças",
+    "subtitle": "Os seus agrupamentos lectivos do dia escolhido.",
+    "date": "Data",
+    "emptySchedule": "Não tem aulas neste dia.",
+    "headTeacherView": "Turma que dirige",
+    "headTeacherReadOnlyNotice": "Está a ver esta disciplina por dirigir a turma — só quem lecciona pode marcar presenças.",
+    "sessionStatus": {
+      "submitted": "Submetida",
+      "draft": "Por acabar",
+      "pending": "Por marcar"
+    },
+    "status": {
+      "PRESENT": "Presente",
+      "ABSENT": "Falta",
+      "LATE": "Atrasado",
+      "EXCUSED": "Justificado"
+    },
+    "submittedNotice": "Esta sessão já foi submetida.",
+    "reopen": "Reabrir",
+    "submitting": "A submeter…",
+    "submit": "Submeter",
+    "reportTitle": "Assiduidade",
+    "reportSubtitle": "Mapa de presenças por turma, aluno e período, com faltas por disciplina.",
+    "classGroup": "Turma",
+    "term": "Período",
+    "filter": "Filtrar",
+    "reportChooseFilters": "Escolha uma turma e um período para ver o mapa.",
+    "reportEmpty": "Não há alunos matriculados nesta turma.",
+    "student": "Aluno",
+    "bySubject": "Faltas por disciplina",
+    "totalAbsences": "Total de faltas",
+    "errors": {
+      "forbidden": "Não tem permissão para esta acção",
+      "invalid": "Os dados enviados não são válidos",
+      "conflict": "Esta sessão já foi alterada por outra pessoa. Tente de novo."
+    }
+  },
+  "settings": {
+    "title": "Configuração",
+    "subtitle": "Definições da própria escola.",
+    "errors": {
+      "forbidden": "Não tem permissão para configurar a escola"
+    },
+    "comingSoon": "Nome, logótipo e fórmulas de pagamento da escola ficam para uma fase seguinte."
+  },
+  "permissionRoles": {
+    "rolesTitle": "Papéis configuráveis",
+    "rolesSubtitle": "Crie papéis como \"Director-adjunto\" ou \"Secretaria\" e escolha o que cada um pode ver, criar, editar ou apagar.",
+    "rolesTableLabel": "Papéis configuráveis",
+    "rolesEmpty": "Ainda não há papéis configuráveis",
+    "rolesEmptyHint": "Sem um papel atribuído, cada gestor mantém acesso total — comportamento actual.",
+    "columns": {
+      "name": "Nome",
+      "description": "Descrição",
+      "permissionCount": "Permissões",
+      "memberCount": "Membros"
+    },
+    "create": {
+      "trigger": "Criar papel",
+      "title": "Criar papel configurável",
+      "description": "Marque o que este papel pode fazer. Um papel sem nenhuma permissão marcada nega tudo.",
+      "fields": {
+        "name": "Nome",
+        "description": "Descrição"
+      },
+      "permissionsTitle": "Permissões",
+      "resourceColumn": "Recurso"
+    },
+    "resources": {
+      "students": "Alunos",
+      "enrollments": "Matrículas",
+      "attendance": "Presenças",
+      "grades": "Notas",
+      "term-closing": "Fecho de trimestre",
+      "report-cards": "Pautas",
+      "academic-structure": "Estrutura académica",
+      "teaching-staff": "Professores",
+      "assessment-schemes": "Esquemas de avaliação"
+    },
+    "actions": {
+      "view": "Ver",
+      "create": "Criar",
+      "edit": "Editar",
+      "delete": "Apagar"
+    },
+    "staffTitle": "Atribuir papéis",
+    "staffSubtitle": "Gestores da escola — sem papel atribuído, mantêm acesso total.",
+    "staffEmpty": "Ainda não há gestores nesta escola.",
+    "restricted": "Papel restrito",
+    "unrestrictedBadge": "Acesso total",
+    "unrestrictedOption": "Acesso total (sem restrição)",
+    "errors": {
+      "name": "Indique um nome para o papel",
+      "membershipNotFound": "Este gestor já não existe nesta escola",
+      "roleNotFound": "Este papel já não existe",
+      "assignFailed": "Não foi possível atribuir o papel"
+    }
+  },
+  "academic": {
+    "title": "Estrutura académica",
+    "subtitle": "Classes, secções, percursos, disciplinas e turmas da escola.",
+    "tabs": {
+      "gradeLevels": "Classes",
+      "sections": "Secções",
+      "studyPaths": "Percursos",
+      "subjects": "Disciplinas",
+      "curriculumSubjects": "Disciplinas por percurso",
+      "classGroups": "Turmas",
+      "rooms": "Salas",
+      "timeSlots": "Tempos lectivos"
+    },
+    "cycle": {
+      "PRIMARY": "Ensino primário",
+      "SECONDARY_FIRST_CYCLE": "1º ciclo do secundário",
+      "SECONDARY_SECOND_CYCLE": "2º ciclo do secundário",
+      "TECHNICAL": "Ensino técnico"
+    },
+    "shift": {
+      "MORNING": "Manhã",
+      "AFTERNOON": "Tarde",
+      "EVENING": "Noite"
+    },
+    "roomKind": {
+      "CLASSROOM": "Sala de aula",
+      "LABORATORY": "Laboratório",
+      "WORKSHOP": "Oficina",
+      "AUDITORIUM": "Auditório",
+      "OTHER": "Outra"
+    },
+    "dayOfWeek": {
+      "MONDAY": "Segunda-feira",
+      "TUESDAY": "Terça-feira",
+      "WEDNESDAY": "Quarta-feira",
+      "THURSDAY": "Quinta-feira",
+      "FRIDAY": "Sexta-feira",
+      "SATURDAY": "Sábado",
+      "SUNDAY": "Domingo"
+    },
+    "scope": {
+      "CORE": "Tronco comum",
+      "SECTION": "Secção",
+      "INTERNAL": "Currículo interno"
+    },
+    "yes": "Sim",
+    "no": "Não",
+    "gradeLevels": {
+      "title": "Classes",
+      "subtitle": "Níveis de ensino, com a sua ordem e se têm exame nacional.",
+      "tableLabel": "Lista de classes",
+      "empty": "Ainda não há classes registadas",
+      "emptyHint": "Comece por criar as classes que a escola lecciona.",
+      "columns": {
+        "code": "Código",
+        "name": "Nome",
+        "order": "Ordem",
+        "cycle": "Ciclo",
+        "isExamLevel": "Exame nacional"
+      },
+      "create": {
+        "trigger": "Adicionar classe",
+        "title": "Nova classe",
+        "description": "O código tem de ser único na escola.",
+        "fields": {
+          "code": "Código",
+          "name": "Nome",
+          "order": "Ordem",
+          "cycle": "Ciclo de ensino",
+          "isExamLevel": "Classe com exame nacional"
+        }
+      },
+      "errors": {
+        "code": "Indique um código",
+        "name": "Indique o nome",
+        "order": "Indique a ordem",
+        "cycle": "Seleccione o ciclo de ensino",
+        "isExamLevel": "Valor inválido",
+        "duplicateCode": "Já existe uma classe com este código"
+      }
+    },
+    "sections": {
+      "title": "Secções",
+      "subtitle": "Áreas de estudo, como Ciências ou Letras.",
+      "tableLabel": "Lista de secções",
+      "empty": "Ainda não há secções registadas",
+      "emptyHint": "Classes sem secções (ensino primário e 1º ciclo) não precisam de nenhuma.",
+      "columns": {
+        "code": "Código",
+        "name": "Nome",
+        "description": "Descrição"
+      },
+      "create": {
+        "trigger": "Adicionar secção",
+        "title": "Nova secção",
+        "description": "O código tem de ser único na escola.",
+        "fields": {
+          "code": "Código",
+          "name": "Nome",
+          "description": "Descrição"
+        }
+      },
+      "errors": {
+        "code": "Indique um código",
+        "name": "Indique o nome",
+        "description": "Descrição inválida",
+        "duplicateCode": "Já existe uma secção com este código"
+      }
+    },
+    "studyPaths": {
+      "title": "Percursos",
+      "subtitle": "Classe + secção, no ano lectivo activo — é daqui que saem as disciplinas do aluno.",
+      "tableLabel": "Lista de percursos",
+      "empty": "Ainda não há percursos registados",
+      "emptyHint": "Um percurso liga uma classe (e, quando aplicável, uma secção) ao ano lectivo activo.",
+      "missingGradeLevel": "Crie uma classe primeiro",
+      "noSectionOption": "Sem secção",
+      "columns": {
+        "code": "Código",
+        "name": "Nome",
+        "gradeLevel": "Classe",
+        "section": "Secção"
+      },
+      "create": {
+        "trigger": "Adicionar percurso",
+        "title": "Novo percurso",
+        "description": "Percursos sem secção servem classes que não têm (ensino primário e 1º ciclo).",
+        "fields": {
+          "gradeLevelId": "Classe",
+          "sectionId": "Secção",
+          "name": "Nome"
+        }
+      },
+      "errors": {
+        "gradeLevelId": "Seleccione a classe",
+        "sectionId": "Secção inválida",
+        "name": "Indique o nome",
+        "noActiveYear": "Não há um ano lectivo activo para criar percursos",
+        "duplicate": "Já existe um percurso para esta classe e secção neste ano lectivo"
+      }
+    },
+    "subjects": {
+      "title": "Disciplinas",
+      "subtitle": "Disciplinas da escola, reutilizáveis entre percursos.",
+      "tableLabel": "Lista de disciplinas",
+      "empty": "Ainda não há disciplinas registadas",
+      "emptyHint": "As disciplinas ficam disponíveis para todos os percursos assim que criadas.",
+      "columns": {
+        "code": "Código",
+        "name": "Nome",
+        "shortName": "Sigla",
+        "area": "Área"
+      },
+      "create": {
+        "trigger": "Adicionar disciplina",
+        "title": "Nova disciplina",
+        "description": "O código tem de ser único na escola.",
+        "fields": {
+          "code": "Código",
+          "name": "Nome",
+          "shortName": "Sigla",
+          "area": "Área"
+        }
+      },
+      "errors": {
+        "code": "Indique um código",
+        "name": "Indique o nome",
+        "shortName": "Sigla inválida",
+        "area": "Área inválida",
+        "duplicateCode": "Já existe uma disciplina com este código"
+      }
+    },
+    "curriculumSubjects": {
+      "title": "Disciplinas por percurso",
+      "subtitle": "Associação de disciplinas a percursos — tronco comum, secção, ou currículo interno.",
+      "tableLabel": "Lista de disciplinas por percurso",
+      "empty": "Ainda não há disciplinas associadas a percursos",
+      "emptyHint": "Associe disciplinas a um percurso para definir a carga horária e o coeficiente de cada uma.",
+      "missingStudyPath": "Crie um percurso primeiro",
+      "missingSubject": "Crie uma disciplina primeiro",
+      "columns": {
+        "studyPath": "Percurso",
+        "subject": "Disciplina",
+        "scope": "Âmbito",
+        "weeklyHours": "Carga horária semanal",
+        "coefficient": "Coeficiente",
+        "isExamSubject": "Disciplina de exame"
+      },
+      "create": {
+        "trigger": "Associar disciplina",
+        "title": "Associar disciplina a percurso",
+        "description": "A mesma disciplina pode associar-se a vários percursos, cada um com o seu coeficiente.",
+        "fields": {
+          "studyPathId": "Percurso",
+          "subjectId": "Disciplina",
+          "scope": "Âmbito",
+          "weeklyHours": "Carga horária semanal",
+          "coefficient": "Coeficiente",
+          "isExamSubject": "Disciplina de exame"
+        }
+      },
+      "errors": {
+        "studyPathId": "Seleccione o percurso",
+        "subjectId": "Seleccione a disciplina",
+        "scope": "Seleccione o âmbito",
+        "weeklyHours": "Indique a carga horária semanal",
+        "coefficient": "Indique um coeficiente positivo",
+        "isExamSubject": "Valor inválido",
+        "duplicate": "Esta disciplina já está associada a este percurso"
+      }
+    },
+    "classGroups": {
+      "title": "Turmas",
+      "subtitle": "Turmas do ano lectivo activo — nome, turno e capacidade.",
+      "tableLabel": "Lista de turmas",
+      "empty": "Ainda não há turmas registadas",
+      "emptyHint": "As turmas aparecem aqui assim que forem criadas.",
+      "noHeadTeacherOption": "Sem director de turma",
+      "columns": {
+        "name": "Nome",
+        "shift": "Turno",
+        "capacity": "Capacidade",
+        "headTeacher": "Director de turma"
+      },
+      "create": {
+        "trigger": "Adicionar turma",
+        "title": "Nova turma",
+        "description": "A turma fica associada ao ano lectivo activo.",
+        "fields": {
+          "name": "Nome",
+          "shift": "Turno",
+          "capacity": "Capacidade",
+          "headTeacherId": "Director de turma"
+        }
+      },
+      "errors": {
+        "name": "Indique o nome",
+        "shift": "Seleccione o turno",
+        "capacity": "Indique a capacidade",
+        "noActiveYear": "Não há um ano lectivo activo para criar turmas",
+        "duplicateName": "Já existe uma turma com este nome neste ano lectivo"
+      }
+    },
+    "rooms": {
+      "title": "Salas",
+      "subtitle": "Salas físicas da escola, para o horário.",
+      "tableLabel": "Lista de salas",
+      "empty": "Ainda não há salas registadas",
+      "emptyHint": "As salas aparecem aqui assim que forem criadas.",
+      "columns": {
+        "code": "Código",
+        "name": "Nome",
+        "capacity": "Capacidade",
+        "kind": "Tipo"
+      },
+      "create": {
+        "trigger": "Adicionar sala",
+        "title": "Nova sala",
+        "description": "A capacidade fica só informativa nesta fase — não impede colocações no horário.",
+        "fields": {
+          "code": "Código",
+          "name": "Nome",
+          "capacity": "Capacidade",
+          "kind": "Tipo"
+        }
+      },
+      "errors": {
+        "code": "Indique um código",
+        "name": "Indique o nome",
+        "capacity": "Indique a capacidade",
+        "kind": "Seleccione o tipo",
+        "duplicateCode": "Já existe uma sala com este código"
+      }
+    },
+    "timeSlots": {
+      "title": "Tempos lectivos",
+      "subtitle": "Tempos lectivos do ano lectivo activo, por dia da semana e turno.",
+      "tableLabel": "Lista de tempos lectivos",
+      "empty": "Ainda não há tempos lectivos definidos",
+      "emptyHint": "Os tempos lectivos aparecem aqui assim que forem criados.",
+      "columns": {
+        "dayOfWeek": "Dia",
+        "startTime": "Início",
+        "endTime": "Fim",
+        "shift": "Turno",
+        "order": "Ordem"
+      },
+      "create": {
+        "trigger": "Adicionar tempo lectivo",
+        "title": "Novo tempo lectivo",
+        "description": "Associado ao ano lectivo activo.",
+        "fields": {
+          "dayOfWeek": "Dia da semana",
+          "startTime": "Hora de início",
+          "endTime": "Hora de fim",
+          "shift": "Turno",
+          "order": "Ordem"
+        }
+      },
+      "errors": {
+        "dayOfWeek": "Seleccione o dia da semana",
+        "startTime": "Indique a hora de início, no formato HH:mm",
+        "endTime": "Indique a hora de fim, depois da hora de início",
+        "shift": "Seleccione o turno",
+        "order": "Indique a ordem",
+        "noActiveYear": "Não há um ano lectivo activo para criar tempos lectivos",
+        "duplicate": "Já existe um tempo lectivo igual a este, no mesmo dia e turno"
+      }
+    }
+  },
+  "scheduling": {
+    "errors": {
+      "forbidden": "Não tem permissão para montar o horário",
+      "invalid": "Os dados enviados não são válidos",
+      "noActiveYear": "Não há um ano lectivo activo para montar o horário",
+      "noTeacherAssigned": "Este agrupamento ainda não tem professor atribuído"
+    },
+    "conflicts": {
+      "teacherDoubleBooked": "{teacher} já tem {group} neste tempo",
+      "roomDoubleBooked": "Esta sala está ocupada por {group}",
+      "groupDoubleBooked": "Este agrupamento já tem aula neste tempo",
+      "studentDoubleBooked": "{count, plural, one {# aluno já tem {group} neste tempo} other {# alunos já têm {group} neste tempo}}",
+      "raceCondition": "Outra pessoa gravou uma colocação em conflito com esta, entretanto. Tente novamente."
+    },
+    "warnings": {
+      "maxWeeklyHoursExceeded": "Este professor passa a ter {total} horas semanais, acima do máximo de {max}."
+    },
+    "title": "Horários",
+    "subtitle": "Montagem do horário lectivo — por turma, professor ou sala.",
+    "board": {
+      "noTimeSlots": "Ainda não há tempos lectivos definidos. Crie-os em Estrutura académica antes de montar o horário.",
+      "viewBy": "Ver por",
+      "byClass": "Turma",
+      "byTeacher": "Professor",
+      "byRoom": "Sala",
+      "viewEntity": "Escolher",
+      "placeTrigger": "Colocar aula",
+      "period": "Tempo",
+      "emptyCell": "Colocar aula neste tempo",
+      "placeTitle": "Colocar aula",
+      "editTitle": "Editar colocação",
+      "placeDescription": "Ano lectivo {year}. Os conflitos aparecem aqui antes de gravar.",
+      "fields": {
+        "teachingGroupId": "Agrupamento lectivo",
+        "roomId": "Sala",
+        "timeSlotId": "Tempo lectivo"
+      }
+    },
+    "view": {
+      "title": "O meu horário",
+      "empty": "Ainda não há aulas no seu horário.",
+      "child": "Educando",
+      "view": "Ver",
+      "noAccess": "Esta conta não tem acesso a nenhum horário."
+    },
+    "print": {
+      "title": "Imprimir horário de turma",
+      "subtitle": "Escolha uma turma para ver e imprimir o seu horário semanal.",
+      "classGroup": "Turma",
+      "view": "Ver",
+      "trigger": "Imprimir",
+      "empty": "Esta turma ainda não tem nenhuma aula colocada no horário."
+    }
+  },
+  "teachingStaff": {
+    "title": "Professores",
+    "subtitle": "Professores e as suas atribuições a turmas e disciplinas.",
+    "tabs": {
+      "teachers": "Professores",
+      "teachingGroups": "Atribuições"
+    },
+    "scope": {
+      "CORE": "Tronco comum",
+      "SECTION": "Secção",
+      "INTERNAL": "Currículo interno"
+    },
+    "loginAccess": {
+      "yes": "Com acesso",
+      "no": "Sem acesso"
+    },
+    "teachers": {
+      "title": "Professores",
+      "subtitle": "Professores da escola. A ligação a uma conta de acesso é feita à parte.",
+      "tableLabel": "Lista de professores",
+      "empty": "Ainda não há professores registados",
+      "emptyHint": "Um professor pode ser atribuído a turmas e disciplinas mesmo sem acesso de login.",
+      "columns": {
+        "code": "Código",
+        "name": "Nome",
+        "phone": "Telefone",
+        "email": "Email",
+        "qualification": "Qualificação",
+        "maxWeeklyHours": "Carga horária máxima",
+        "hasLoginAccess": "Acesso"
+      },
+      "create": {
+        "trigger": "Adicionar professor",
+        "title": "Novo professor",
+        "description": "O código tem de ser único na escola.",
+        "fields": {
+          "code": "Código",
+          "firstName": "Nome próprio",
+          "lastName": "Apelido",
+          "phone": "Telefone",
+          "email": "Email",
+          "qualification": "Qualificação",
+          "maxWeeklyHours": "Carga horária máxima semanal"
+        }
+      },
+      "errors": {
+        "code": "Indique um código",
+        "firstName": "Indique o nome próprio",
+        "lastName": "Indique o apelido",
+        "phone": "Telefone inválido",
+        "email": "Indique um email válido",
+        "qualification": "Qualificação inválida",
+        "maxWeeklyHours": "Indique um número de horas válido",
+        "duplicateCode": "Já existe um professor com este código"
+      }
+    },
+    "teachingGroups": {
+      "title": "Atribuições",
+      "subtitle": "Professor por disciplina e turma, no ano lectivo activo.",
+      "tableLabel": "Lista de atribuições",
+      "empty": "Ainda não há atribuições registadas",
+      "emptyHint": "Atribua um professor a uma disciplina para o associar ao horário.",
+      "missingSubject": "Crie uma disciplina primeiro",
+      "missingTeacher": "Crie um professor primeiro",
+      "columns": {
+        "name": "Nome",
+        "subject": "Disciplina",
+        "teacher": "Professor",
+        "classGroup": "Turma",
+        "scope": "Âmbito"
+      },
+      "noClassGroup": "Sem turma",
+      "create": {
+        "trigger": "Atribuir professor",
+        "title": "Nova atribuição",
+        "description": "A turma é opcional — fica vazia para atribuições por secção ou currículo interno.",
+        "fields": {
+          "name": "Nome da atribuição",
+          "subjectId": "Disciplina",
+          "teacherId": "Professor",
+          "classGroupId": "Turma",
+          "scope": "Âmbito"
+        }
+      },
+      "errors": {
+        "name": "Indique um nome",
+        "subjectId": "Seleccione a disciplina",
+        "teacherId": "Seleccione o professor",
+        "classGroupId": "Turma inválida",
+        "scope": "Seleccione o âmbito",
+        "noActiveYear": "Não há um ano lectivo activo para atribuir professores",
+        "generic": "Não foi possível criar esta atribuição"
+      }
+    }
+  },
+  "assessmentSchemes": {
+    "title": "Esquemas de avaliação",
+    "subtitle": "A fórmula de cálculo de médias por classe e disciplina, incluindo o regime de exame.",
+    "tableLabel": "Lista de esquemas de avaliação",
+    "empty": "Ainda não há esquemas de avaliação registados",
+    "emptyHint": "Um esquema sem classe nem disciplina é o esquema geral do ano.",
+    "generalScheme": "Geral do ano",
+    "columns": {
+      "name": "Nome",
+      "version": "Versão",
+      "regime": "Regime",
+      "gradeLevel": "Classe",
+      "subject": "Disciplina",
+      "hasExam": "Com exame",
+      "componentCount": "Componentes"
+    },
+    "regime": {
+      "WITH_ASSESSMENT": "Com avaliação",
+      "WITHOUT_ASSESSMENT": "Sem avaliação"
+    },
+    "roundingMode": {
+      "NONE": "Sem arredondamento",
+      "HALF_UP": "Arredondar para cima a partir de 0,5",
+      "HALF_DOWN": "Arredondar para baixo a partir de 0,5",
+      "CEIL": "Arredondar sempre para cima",
+      "FLOOR": "Arredondar sempre para baixo"
+    },
+    "componentType": {
+      "CONTINUOUS": "Avaliação contínua",
+      "TEST": "Teste",
+      "PROJECT": "Trabalho",
+      "PRACTICAL": "Prática",
+      "ORAL": "Oral"
+    },
+    "create": {
+      "trigger": "Novo esquema",
+      "title": "Novo esquema de avaliação",
+      "description": "Um esquema sem classe nem disciplina aplica-se ao ano inteiro; um mais específico prevalece sobre ele.",
+      "fields": {
+        "name": "Nome",
+        "gradeLevelId": "Classe (opcional)",
+        "subjectId": "Disciplina (opcional)",
+        "regime": "Regime",
+        "scaleMin": "Escala mínima",
+        "scaleMax": "Escala máxima",
+        "passMark": "Nota de aprovação",
+        "roundingMode": "Arredondamento",
+        "decimalPlaces": "Casas decimais",
+        "hasExam": "Tem exame",
+        "examWeight": "Peso do exame",
+        "minGradeForExam": "Nota mínima para admissão a exame",
+        "exemptionGrade": "Média de dispensa de exame",
+        "minExamGrade": "Nota mínima no exame"
+      },
+      "examWarning": "Este campo ainda não foi validado com uma escola real — o seu comportamento exacto está por confirmar.",
+      "components": {
+        "title": "Componentes",
+        "hint": "Os pesos dos componentes têm de somar exactamente 1,0000.",
+        "add": "Adicionar componente",
+        "remove": "Remover",
+        "code": "Código",
+        "name": "Nome",
+        "type": "Tipo",
+        "weight": "Peso",
+        "minGrade": "Nota mínima (opcional)"
+      }
+    },
+    "errors": {
+      "name": "Indique o nome",
+      "gradeLevelId": "Classe inválida",
+      "subjectId": "Disciplina inválida",
+      "regime": "Seleccione o regime",
+      "scaleMin": "Indique a escala mínima",
+      "scaleMax": "Indique a escala máxima",
+      "passMark": "Indique a nota de aprovação",
+      "roundingMode": "Seleccione o modo de arredondamento",
+      "decimalPlaces": "Indique as casas decimais",
+      "hasExam": "Valor inválido",
+      "examWeight": "Indique o peso do exame",
+      "minGradeForExam": "Nota inválida",
+      "exemptionGrade": "Nota inválida",
+      "minExamGrade": "Nota inválida",
+      "components": "Componentes inválidos",
+      "noActiveYear": "Não há um ano lectivo activo para criar esquemas de avaliação",
+      "weightsDoNotSumToOne": "Os pesos dos componentes somam {actual}, não 1,0000",
+      "noComponents": "Um esquema com avaliação precisa de pelo menos um componente",
+      "duplicateComponentCode": "O código de componente «{code}» está repetido",
+      "invalidScale": "Escala inválida: {detail}",
+      "examWeightWithoutExam": "Há um peso de exame definido, mas «Tem exame» está desligado",
+      "thresholdOutOfScale": "O valor de «{field}» está fora da escala definida"
+    }
+  },
+  "gradeEntry": {
+    "title": "Notas",
+    "subtitle": "Os seus agrupamentos lectivos do ano lectivo activo.",
+    "emptyGroups": "Ainda não tem agrupamentos lectivos atribuídos.",
+    "noOpenTerm": "Não há um trimestre aberto neste momento.",
+    "noScheme": "Ainda não há um esquema de avaliação para esta classe/disciplina. Peça à gestão para criar um em Avaliação.",
+    "emptyAssessments": "Ainda não há avaliações criadas neste trimestre.",
+    "headTeacherView": "Turma que dirige",
+    "headTeacherReadOnlyNotice": "Está a ver esta disciplina por dirigir a turma — só quem lecciona pode lançar notas.",
+    "average": "Média",
+    "scoreLabel": "Nota de {name}",
+    "absent": "Faltou",
+    "saving": "A guardar…",
+    "save": "Guardar",
+    "errors": {
+      "invalid": "Os dados enviados não são válidos"
+    },
+    "create": {
+      "trigger": "Nova avaliação",
+      "title": "Nova avaliação",
+      "description": "Um teste ou trabalho dentro de um componente do esquema de avaliação.",
+      "fields": {
+        "name": "Nome",
+        "componentId": "Componente",
+        "maxScore": "Valor máximo",
+        "weight": "Peso",
+        "weightHint": "Peso desta avaliação dentro do componente, quando o componente tem várias.",
+        "date": "Data"
+      },
+      "errors": {
+        "teachingGroupId": "Agrupamento inválido",
+        "termId": "Trimestre inválido",
+        "componentId": "Seleccione um componente do esquema deste agrupamento",
+        "name": "Indique o nome",
+        "maxScore": "Indique um valor máximo positivo",
+        "weight": "Indique um peso positivo",
+        "date": "Indique uma data válida"
+      }
+    },
+    "notes": {
+      "componentWithoutGrades": "Componente {component} sem notas lançadas",
+      "weightsRenormalised": "Pesos redistribuídos pelos componentes com notas",
+      "belowComponentMinimum": "Abaixo do mínimo exigido em {component}",
+      "exemptFromExam": "Dispensado de exame",
+      "notAdmittedToExam": "Não admitido a exame",
+      "belowExamMinimum": "Abaixo do mínimo exigido no exame",
+      "noGradesAtAll": "Sem notas lançadas"
+    }
+  },
+  "termClosing": {
+    "title": "Fecho de trimestre",
+    "subtitle": "Materializa as pautas do trimestre — depois de fechado, a fórmula usada fica congelada nos resultados.",
+    "empty": "Não há trimestres no ano lectivo activo.",
+    "status": {
+      "OPEN": "Aberto",
+      "CLOSED": "Fechado"
+    },
+    "trigger": "Fechar",
+    "confirmTitle": "Fechar {term}?",
+    "confirmDescription": "Esta acção calcula e grava os resultados de todas as disciplinas e alunos deste trimestre. Não é possível reabrir nesta fase — confirme que todas as notas estão lançadas.",
+    "cancel": "Cancelar",
+    "closing": "A fechar…",
+    "confirm": "Fechar trimestre",
+    "errors": {
+      "invalid": "Os dados enviados não são válidos",
+      "notFound": "Trimestre não encontrado",
+      "alreadyClosed": "Este trimestre já está fechado"
+    }
+  },
+  "reportCards": {
+    "title": "Pautas",
+    "subtitle": "Resultados por turma, disciplina e trimestre, a partir dos trimestres fechados.",
+    "classGroup": "Turma",
+    "subject": "Disciplina",
+    "term": "Trimestre",
+    "filter": "Filtrar",
+    "chooseFilters": "Escolha uma turma, uma disciplina e um trimestre para ver a pauta.",
+    "notFound": "Não foi possível encontrar esta turma, disciplina ou trimestre.",
+    "termOpen": "Este trimestre ainda não foi fechado — a pauta só fica disponível depois do fecho.",
+    "empty": "Não há alunos matriculados nesta turma.",
+    "student": "Aluno",
+    "average": "Média",
+    "finalScore": "Nota final",
+    "situation": "Situação",
+    "pending": "Pendente",
+    "passed": "Aprovado",
+    "failed": "Reprovado"
   }
 }

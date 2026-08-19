@@ -1,15 +1,16 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { Badge } from "@/components/ui/badge";
 import type { StudentRow } from "@/features/academic/data/students";
+import { useLocaleFormatter } from "@/i18n/use-locale-formatter";
 
 export function StudentsTable({ rows }: { rows: StudentRow[] }) {
   const t = useTranslations("students");
-  const format = useFormatter();
+  const format = useLocaleFormatter();
 
   const columns = useMemo<DataTableColumn<StudentRow>[]>(
     () => [

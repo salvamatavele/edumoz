@@ -10,9 +10,10 @@ import { prisma } from "./client";
  * entre escolas.
  *
  * Ausentes de propósito: `School` (é o próprio tenant), `User`, `Account`, `Session` e
- * `VerificationToken` (globais — um utilizador pertence a várias escolas), e os modelos
- * de junção que herdam o âmbito do pai (`StudentGuardian`, `TeachingGroupMember`,
- * `AssessmentComponent`, `InvoiceLine`, `AttendanceRecord`).
+ * `VerificationToken` (globais — um utilizador pertence a várias escolas), `Permission`
+ * (catálogo fixo, global, ver `permission-catalog.ts`), e os modelos de junção que herdam
+ * o âmbito do pai (`StudentGuardian`, `TeachingGroupMember`, `AssessmentComponent`,
+ * `InvoiceLine`, `AttendanceRecord`, `RolePermission`).
  */
 export const TENANT_SCOPED_MODELS = [
   "AcademicYear",
@@ -33,6 +34,7 @@ export const TENANT_SCOPED_MODELS = [
   "IssuedDocument",
   "Membership",
   "Payment",
+  "PermissionRole",
   "Room",
   "ScheduleEntry",
   "Section",

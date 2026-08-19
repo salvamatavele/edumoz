@@ -1,8 +1,11 @@
 # Spec — Avaliação e pautas
 
-- **Estado:** Por aprovar
+- **Estado:** ✅ Implementado (excepto RF-04 e a nota de exame — ver §2)
 - **Depende de:** [`domain-foundation.md`](./domain-foundation.md), [`pending-fixes.md`](./pending-fixes.md)
 - **Âmbito:** configuração da fórmula, lançamento de notas e fecho de pautas.
+- **Implementado via OpenSpec:** RF-01–RF-03 no change `academic-configuration`
+  (capability `assessment-schemes`, arquivado); RF-05–RF-10 no change `assessment-grading`.
+  Ver `openspec/changes/` (activos e arquivados) e `docs/specs/README.md`.
 
 ---
 
@@ -17,18 +20,23 @@ para um aluno.
 
 ## 2. Requisitos
 
-| ID | Requisito |
-|----|-----------|
-| RF-01 | Painel de administração da fórmula: componentes, pesos, escala, arredondamento |
-| RF-02 | Validação em tempo real dos pesos — a soma tem de dar exactamente 1 |
-| RF-03 | Esquemas por ano lectivo, com âmbito opcional por classe e disciplina |
-| RF-04 | Um esquema publicado é imutável; alterar cria uma nova versão |
-| RF-05 | Professor lança notas por agrupamento lectivo, em grelha |
-| RF-06 | A média calculada aparece enquanto se lança, não só no fim |
-| RF-07 | As `notes` do resultado são mostradas em texto legível |
-| RF-08 | Fechar o trimestre materializa `TermResult` e congela-o |
-| RF-09 | Pauta imprimível por turma e disciplina |
-| RF-10 | Aluno e encarregado vêem as suas notas, publicadas |
+| ID | Requisito | Estado |
+|----|-----------|--------|
+| RF-01 | Painel de administração da fórmula: componentes, pesos, escala, arredondamento | ✅ |
+| RF-02 | Validação em tempo real dos pesos — a soma tem de dar exactamente 1 | ✅ (no servidor, via `validateScheme`) |
+| RF-03 | Esquemas por ano lectivo, com âmbito opcional por classe e disciplina | ✅ |
+| RF-04 | Um esquema publicado é imutável; alterar cria uma nova versão | ⏳ Não implementado — só criação existe, sem edição nem versionamento |
+| RF-05 | Professor lança notas por agrupamento lectivo, em grelha | ✅ |
+| RF-06 | A média calculada aparece enquanto se lança, não só no fim | ✅ |
+| RF-07 | As `notes` do resultado são mostradas em texto legível | ✅ |
+| RF-08 | Fechar o trimestre materializa `TermResult` e congela-o | ✅ (sem reabrir — fora de âmbito por agora) |
+| RF-09 | Pauta imprimível por turma e disciplina | ✅ |
+| RF-10 | Aluno e encarregado vêem as suas notas, publicadas | ✅ |
+
+Nota de exame (`examScore`) fica por implementar em qualquer RF: os campos de exame do
+esquema continuam por confirmar com uma escola real (§3.1). O fecho de trimestre e a
+grelha de lançamento funcionam sem isto — `computeSubjectResult` trata `examScore: null`
+como "pendente", não "reprovado", quando `hasExam` está desligado.
 
 ---
 
@@ -91,16 +99,16 @@ obriga alguém a reconstruir o raciocínio à mão.
 
 ## 4. Critérios de aceitação
 
-- [ ] Pesos que não somam 1 impedem gravar, com todos os erros visíveis de uma vez
-- [ ] Um esquema publicado não pode ser alterado — só versionado
-- [ ] A média mostrada ao lançar coincide com a que o fecho grava
-- [ ] Um componente sem notas renormaliza os pesos e a pauta di-lo
-- [ ] Fechar o trimestre grava `TermResult` com a versão do esquema
-- [ ] Alterar o esquema depois do fecho não muda nenhum `TermResult`
-- [ ] Um professor não lança notas em agrupamentos que não são seus
-- [ ] Um aluno vê as suas notas e nenhuma de outro aluno
-- [ ] A pauta imprime em A4 sem cortar colunas
-- [ ] `pnpm build`, `lint` e `test` verdes
+- [x] Pesos que não somam 1 impedem gravar, com todos os erros visíveis de uma vez
+- [ ] Um esquema publicado não pode ser alterado — só versionado (RF-04 não implementado)
+- [x] A média mostrada ao lançar coincide com a que o fecho grava (mesmo `computeSubjectResult`)
+- [x] Um componente sem notas renormaliza os pesos e a pauta di-lo
+- [x] Fechar o trimestre grava `TermResult` com a versão do esquema
+- [ ] Alterar o esquema depois do fecho não muda nenhum `TermResult` (garantido pelo desenho — `schemeVersion` congelado — mas sem teste automático dedicado)
+- [x] Um professor não lança notas em agrupamentos que não são seus
+- [x] Um aluno vê as suas notas e nenhuma de outro aluno
+- [ ] A pauta imprime em A4 sem cortar colunas (CSS de impressão aplicado; sem verificação em impressora real)
+- [x] `pnpm build`, `lint` e `test` verdes
 
 ---
 

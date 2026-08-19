@@ -369,6 +369,40 @@ export function computeSubjectResult(
   };
 }
 
+/** Identifica o âmbito de um esquema candidato — o que `resolveApplicableScheme` compara. */
+export interface SchemeScope {
+  readonly gradeLevelId: string | null;
+  readonly subjectId: string | null;
+}
+
+/**
+ * Resolve qual esquema se aplica a uma classe e disciplina concretas, do mais específico
+ * para o mais geral: (classe + disciplina) → (só disciplina) → (só classe) → nenhum dos
+ * dois (esquema base do ano). Requisito já escrito na capability `assessment-schemes`
+ * ("Esquema geral do ano vs. esquema específico") mas nunca antes implementado — este é o
+ * primeiro consumidor real. Pura e genérica: quem chama passa os seus próprios candidatos
+ * (normalmente linhas de `AssessmentScheme` já filtradas por `getTenantDb` e pelo ano
+ * lectivo activo), sem este módulo saber nada de Prisma.
+ */
+export function resolveApplicableScheme<T extends SchemeScope>(
+  schemes: readonly T[],
+  target: { readonly gradeLevelId: string; readonly subjectId: string },
+): T | null {
+  const bothMatch = schemes.find(
+    (s) => s.gradeLevelId === target.gradeLevelId && s.subjectId === target.subjectId,
+  );
+  if (bothMatch) return bothMatch;
+
+  const subjectMatch = schemes.find((s) => s.gradeLevelId === null && s.subjectId === target.subjectId);
+  if (subjectMatch) return subjectMatch;
+
+  const gradeLevelMatch = schemes.find((s) => s.gradeLevelId === target.gradeLevelId && s.subjectId === null);
+  if (gradeLevelMatch) return gradeLevelMatch;
+
+  const base = schemes.find((s) => s.gradeLevelId === null && s.subjectId === null);
+  return base ?? null;
+}
+
 /** Esquema mínimo utilizável, para testes e para o arranque de uma escola nova. */
 export function baseScheme(
   overrides: Partial<AssessmentSchemeDefinition> = {},

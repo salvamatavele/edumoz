@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { renderWithIntl } from "@/test/intl";
@@ -53,5 +54,26 @@ describe("Input", () => {
     renderWithIntl(<Input label="Nome completo do aluno" required />);
 
     expect(screen.getByLabelText(/obrigatório/)).toBeRequired();
+  });
+
+  it("esconde a palavra-passe por omissão e revela-a ao clicar", async () => {
+    renderWithIntl(<Input label="Palavra-passe" type="password" />);
+
+    const field = screen.getByLabelText("Palavra-passe");
+    expect(field).toHaveAttribute("type", "password");
+
+    await userEvent.click(screen.getByRole("button", { name: "Mostrar palavra-passe" }));
+    expect(field).toHaveAttribute("type", "text");
+
+    await userEvent.click(screen.getByRole("button", { name: "Esconder palavra-passe" }));
+    expect(field).toHaveAttribute("type", "password");
+  });
+
+  it("não mostra o botão de revelar num campo que não é de palavra-passe", () => {
+    renderWithIntl(<Input label="Nome" type="text" />);
+
+    expect(
+      screen.queryByRole("button", { name: /palavra-passe/ }),
+    ).not.toBeInTheDocument();
   });
 });

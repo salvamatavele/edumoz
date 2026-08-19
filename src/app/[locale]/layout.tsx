@@ -3,9 +3,8 @@ import { Lexend, Source_Sans_3 } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { SessionProvider } from "next-auth/react";
 
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeScript } from "@/components/theme/theme-script";
 import { LOCALE_TAGS, routing } from "@/i18n/routing";
 
@@ -79,17 +78,20 @@ export default async function LocaleLayout({
       </head>
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>
-          <a
-            href="#conteudo-principal"
-            className="absolute left-4 top-4 z-50 inline-flex h-11 -translate-y-20 items-center rounded-md bg-primary px-4 text-on-primary shadow-lg transition-transform duration-200 ease-(--ease-enter) focus:translate-y-0"
-          >
-            {t("skipToContent")}
-          </a>
-          <SiteHeader />
-          <main id="conteudo-principal" className="flex-1">
+          {/* Sem prop `session`: chamar `auth()` aqui tornaria TODO o layout dinâmico, e
+              perder-se-ia a pré-renderização estática de `generateStaticParams`. As rotas
+              de marketing (`(marketing)/layout.tsx`) ficam estáticas por isso; as do
+              painel (`(dashboard)/layout.tsx`) já chamam `auth()` por si — nada a perder
+              aí. `id="conteudo-principal"`, o alvo deste link, existe nos dois grupos. */}
+          <SessionProvider>
+            <a
+              href="#conteudo-principal"
+              className="absolute left-4 top-4 z-50 inline-flex h-11 -translate-y-20 items-center rounded-md bg-primary px-4 text-on-primary shadow-lg transition-transform duration-200 ease-(--ease-enter) focus:translate-y-0"
+            >
+              {t("skipToContent")}
+            </a>
             {children}
-          </main>
-          <SiteFooter />
+          </SessionProvider>
         </NextIntlClientProvider>
       </body>
     </html>

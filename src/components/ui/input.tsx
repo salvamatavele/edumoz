@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, type ComponentProps } from "react";
+import { useId, useState, type ComponentProps } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -29,6 +29,7 @@ export function Input({
   className,
   required,
   hideLabel = false,
+  type,
   ...props
 }: InputProps) {
   const t = useTranslations("form");
@@ -36,6 +37,11 @@ export function Input({
   const helperId = `${id}-helper`;
   const errorId = `${id}-error`;
   const describedBy = error ? errorId : helperText ? helperId : undefined;
+
+  // A palavra-passe começa sempre escondida — só o próprio utilizador a revela, nunca por
+  // omissão (ex.: num ecrã partilhado numa secretaria).
+  const isPassword = type === "password";
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -52,21 +58,44 @@ export function Input({
         {required ? <span className="sr-only"> ({t("required")})</span> : null}
       </label>
 
-      <input
-        id={id}
-        required={required}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={cn(
-          "h-12 w-full rounded-md border border-border-strong bg-surface px-4 text-base",
-          "text-foreground placeholder:text-muted-foreground",
-          "transition-[border-color,box-shadow] duration-200 ease-(--ease-enter)",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          error && "border-destructive",
-          className,
-        )}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          id={id}
+          type={isPassword ? (passwordVisible ? "text" : "password") : type}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={cn(
+            "h-12 w-full rounded-md border border-border-strong bg-surface px-4 text-base",
+            "text-foreground placeholder:text-muted-foreground",
+            "transition-[border-color,box-shadow] duration-200 ease-(--ease-enter)",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            error && "border-destructive",
+            isPassword && "pr-12",
+            className,
+          )}
+          {...props}
+        />
+
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setPasswordVisible((value) => !value)}
+            aria-label={passwordVisible ? t("hidePassword") : t("showPassword")}
+            aria-pressed={passwordVisible}
+            className={cn(
+              "absolute inset-y-0 right-0 flex w-12 items-center justify-center",
+              "text-muted-foreground transition-colors duration-200 ease-(--ease-enter) hover:text-foreground",
+            )}
+          >
+            {passwordVisible ? (
+              <EyeOff aria-hidden="true" className="size-5" strokeWidth={1.75} />
+            ) : (
+              <Eye aria-hidden="true" className="size-5" strokeWidth={1.75} />
+            )}
+          </button>
+        ) : null}
+      </div>
 
       {error ? (
         <p

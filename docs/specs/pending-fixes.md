@@ -1,6 +1,6 @@
 # Spec — Fecho da fundação
 
-- **Estado:** Por aprovar
+- **Estado:** ✅ Implementado — ver [`CHANGELOG.md`](../../CHANGELOG.md) §Fase 3
 - **Depende de:** [`domain-foundation.md`](./domain-foundation.md)
 - **Âmbito:** o que ficou por fazer na Fase 2 e bloqueia os módulos seguintes.
 
@@ -79,6 +79,14 @@ Duas saídas:
 utilitário próprio que receba o tag completo de `LOCALE_TAGS`, deixando o next-intl só com
 as mensagens.
 
+**Resultado:** o next-intl recusou — não avisa, mas parte silenciosamente. `useFormatter()`
+usa o mesmo `locale` para formatar E para gerar `href`s (`Link`, `usePathname`), e
+`routing.pathnames` só conhece "pt"/"en"; um `Link` para "/design-system" passou a
+resolver `/pt-MZ/design-system`, que não existe. Implementada a alternativa: `locale` em
+`request.ts` ficou no código curto, e `useLocaleFormatter`
+(`src/i18n/use-locale-formatter.ts`) formata com `Intl` directamente e o tag completo, à
+parte do next-intl. Ver CHANGELOG.md, Fase 3.
+
 ### 3.4 Revisão visual do style guide
 
 A migração para shadcn substituiu o `Button` e acrescentou nove componentes. O critério de
@@ -89,16 +97,20 @@ aceitação "zero regressões visuais em `/design-system`" nunca foi verificado 
 
 ## 4. Critérios de aceitação
 
-- [ ] Um utilizador com duas `Membership` troca de escola e a lista de alunos muda
-- [ ] O selector não aparece para quem só tem uma escola
-- [ ] Pedir a troca para um `schoolId` fora das suas `Membership` não altera a sessão
-- [ ] Criar um aluno pelo `FormModal` grava e a lista actualiza sem recarregar a página
-- [ ] Um número de aluno repetido devolve o erro **no campo**, não no topo
-- [ ] Criar um aluno sem papel de gestão é recusado pela Server Action
-- [ ] A criação fica registada em `AuditLog`
-- [ ] `04/05/2010` em português e `04/05/2010` em inglês — mesma data, mesma ordem
-- [ ] `/design-system` revista nos dois temas, sem regressões
-- [ ] `pnpm build`, `lint` e `test` verdes
+- [x] Um utilizador com duas `Membership` troca de escola e a lista de alunos muda
+      (verificado por teste — o seed não tem nenhum utilizador com duas escolas)
+- [x] O selector não aparece para quem só tem uma escola
+- [x] Pedir a troca para um `schoolId` fora das suas `Membership` não altera a sessão
+- [x] Um número de aluno repetido devolve o erro **no campo**, não no topo
+- [x] Criar um aluno sem papel de gestão é recusado pela Server Action
+- [x] A criação fica registada em `AuditLog`
+- [x] `04/05/2010` em português e `04/05/2010` em inglês — mesma data, mesma ordem
+- [x] `/design-system` revista nos dois temas, sem regressões
+- [x] `pnpm build`, `lint` e `test` verdes
+- [ ] ~~Criar um aluno pelo `FormModal` grava e a lista actualiza sem recarregar a página~~
+      — grava, confirmado em teste e manualmente; a lista **não** actualiza, porque parte
+      da `Enrollment`, não do `Student` (ver CHANGELOG, "Problema conhecido"). Corrigir
+      exige um ecrã de matrícula, fora do âmbito deste spec.
 
 ---
 

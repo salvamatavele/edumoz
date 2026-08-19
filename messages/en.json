@@ -14,7 +14,11 @@
     "theme": {
       "toLight": "Switch to light theme",
       "toDark": "Switch to dark theme"
-    }
+    },
+    "forbidden": "You don't have permission for this action",
+    "createMissingDependency": "Create {entity} first",
+    "noneOption": "None (general)",
+    "noActiveYear": "There is no active academic year"
   },
   "nav": {
     "primary": "Main navigation",
@@ -23,7 +27,18 @@
     "closeMenu": "Close menu",
     "home": "Home",
     "designSystem": "Design system",
-    "students": "Students"
+    "students": "Students",
+    "portal": "Portal",
+    "attendance": "Attendance",
+    "attendanceReport": "Attendance report",
+    "settings": "Settings",
+    "academic": "Academic",
+    "teachers": "Teachers",
+    "assessment": "Assessment",
+    "grades": "Grades",
+    "reportCards": "Report cards",
+    "timetables": "Timetables",
+    "myTimetable": "My timetable"
   },
   "home": {
     "badge": "Built for Mozambican schools",
@@ -128,10 +143,13 @@
     "required": "Required field",
     "selectPlaceholder": "Select an option",
     "genericError": "Could not save. Please try again.",
-    "optional": "(optional)"
+    "optional": "(optional)",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "auth": {
     "signIn": "Sign in",
+    "goToDashboard": "Go to dashboard",
     "signInTitle": "Sign in to EduMoz",
     "signInSubtitle": "Use your school account.",
     "withGoogle": "Continue with Google",
@@ -166,6 +184,822 @@
       "MALE": "Male",
       "FEMALE": "Female"
     },
-    "noGuardian": "Not recorded"
+    "noGuardian": "Not recorded",
+    "create": {
+      "trigger": "Add student",
+      "title": "New student",
+      "description": "The student number must be unique within the school.",
+      "fields": {
+        "code": "Student number",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "birthDate": "Date of birth",
+        "gender": "Gender",
+        "phone": "Phone"
+      }
+    },
+    "form": {
+      "errors": {
+        "code": "Enter the student number",
+        "firstName": "Enter the first name",
+        "lastName": "Enter the last name",
+        "birthDate": "Enter a valid date of birth",
+        "gender": "Select the gender",
+        "phone": "Enter a valid phone number",
+        "forbidden": "You don't have permission to add students",
+        "duplicateCode": "A student with this number already exists"
+      }
+    },
+    "enroll": {
+      "sectionTitle": "Not yet enrolled",
+      "sectionSubtitle": "{count, plural, one {# student created but not yet enrolled this academic year} other {# students created but not yet enrolled this academic year}}.",
+      "tableLabel": "List of students awaiting enrolment",
+      "empty": "No students awaiting enrolment",
+      "trigger": "Enrol",
+      "title": "Enrol {name}",
+      "description": "The class and study path must belong to the active academic year.",
+      "columns": {
+        "actions": "Actions"
+      },
+      "fields": {
+        "classGroupId": "Class",
+        "studyPathId": "Study path",
+        "number": "Enrolment number"
+      },
+      "errors": {
+        "studentId": "Invalid student",
+        "classGroupId": "Select the class",
+        "studyPathId": "Select the study path",
+        "number": "Enter the enrolment number",
+        "forbidden": "You don't have permission to enrol students",
+        "duplicateNumber": "An enrolment with this number already exists this academic year",
+        "alreadyEnrolled": "This student is already enrolled in the active academic year",
+        "noActiveYear": "There is no active academic year to enrol into"
+      }
+    }
+  },
+  "portal": {
+    "title": "Welcome to EduMoz",
+    "comingSoon": "Your features are coming in the next modules.",
+    "grades": {
+      "title": "My grades",
+      "child": "Child",
+      "view": "View",
+      "noAccess": "There are no grades to show yet.",
+      "empty": "No closed terms with published grades yet.",
+      "term": "Term",
+      "subject": "Subject",
+      "average": "Average",
+      "finalScore": "Final score",
+      "situation": "Situation",
+      "pending": "Pending",
+      "passed": "Passed",
+      "failed": "Failed"
+    }
+  },
+  "roles": {
+    "PLATFORM_ADMIN": "Platform administrator",
+    "SCHOOL_MANAGER": "Manager",
+    "TEACHER": "Teacher",
+    "STUDENT": "Student",
+    "GUARDIAN": "Guardian"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "subtitle": "Your teaching groups for the chosen day.",
+    "date": "Date",
+    "emptySchedule": "You have no classes on this day.",
+    "headTeacherView": "Class you direct",
+    "headTeacherReadOnlyNotice": "You're viewing this subject as the homeroom teacher — only the teacher of this subject can take attendance.",
+    "sessionStatus": {
+      "submitted": "Submitted",
+      "draft": "Unfinished",
+      "pending": "Not taken yet"
+    },
+    "status": {
+      "PRESENT": "Present",
+      "ABSENT": "Absent",
+      "LATE": "Late",
+      "EXCUSED": "Excused"
+    },
+    "submittedNotice": "This session has already been submitted.",
+    "reopen": "Reopen",
+    "submitting": "Submitting…",
+    "submit": "Submit",
+    "reportTitle": "Attendance",
+    "reportSubtitle": "Attendance map by class, student and period, with absences by subject.",
+    "classGroup": "Class",
+    "term": "Term",
+    "filter": "Filter",
+    "reportChooseFilters": "Choose a class and a term to see the map.",
+    "reportEmpty": "No students enrolled in this class.",
+    "student": "Student",
+    "bySubject": "Absences by subject",
+    "totalAbsences": "Total absences",
+    "errors": {
+      "forbidden": "You don't have permission for this action",
+      "invalid": "The submitted data is not valid",
+      "conflict": "This session was already changed by someone else. Please try again."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "The school's own settings.",
+    "errors": {
+      "forbidden": "You don't have permission to configure the school"
+    },
+    "comingSoon": "The school's name, logo, and payment formulas are a future phase."
+  },
+  "permissionRoles": {
+    "rolesTitle": "Configurable roles",
+    "rolesSubtitle": "Create roles like \"Deputy director\" or \"Registrar\" and choose what each one can view, create, edit, or delete.",
+    "rolesTableLabel": "Configurable roles",
+    "rolesEmpty": "No configurable roles yet",
+    "rolesEmptyHint": "Without an assigned role, every manager keeps full access — today's behaviour.",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "permissionCount": "Permissions",
+      "memberCount": "Members"
+    },
+    "create": {
+      "trigger": "Create role",
+      "title": "Create configurable role",
+      "description": "Mark what this role can do. A role with no permission marked denies everything.",
+      "fields": {
+        "name": "Name",
+        "description": "Description"
+      },
+      "permissionsTitle": "Permissions",
+      "resourceColumn": "Resource"
+    },
+    "resources": {
+      "students": "Students",
+      "enrollments": "Enrollments",
+      "attendance": "Attendance",
+      "grades": "Grades",
+      "term-closing": "Term closing",
+      "report-cards": "Report cards",
+      "academic-structure": "Academic structure",
+      "teaching-staff": "Teachers",
+      "assessment-schemes": "Assessment schemes"
+    },
+    "actions": {
+      "view": "View",
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "staffTitle": "Assign roles",
+    "staffSubtitle": "School managers — without an assigned role, they keep full access.",
+    "staffEmpty": "There are no managers in this school yet.",
+    "restricted": "Restricted role",
+    "unrestrictedBadge": "Full access",
+    "unrestrictedOption": "Full access (unrestricted)",
+    "errors": {
+      "name": "Enter a name for the role",
+      "membershipNotFound": "This manager no longer exists in this school",
+      "roleNotFound": "This role no longer exists",
+      "assignFailed": "Could not assign the role"
+    }
+  },
+  "academic": {
+    "title": "Academic structure",
+    "subtitle": "Grade levels, sections, study paths, subjects and classes for the school.",
+    "tabs": {
+      "gradeLevels": "Grade levels",
+      "sections": "Sections",
+      "studyPaths": "Study paths",
+      "subjects": "Subjects",
+      "curriculumSubjects": "Subjects by study path",
+      "classGroups": "Classes",
+      "rooms": "Rooms",
+      "timeSlots": "Time slots"
+    },
+    "cycle": {
+      "PRIMARY": "Primary education",
+      "SECONDARY_FIRST_CYCLE": "Secondary — first cycle",
+      "SECONDARY_SECOND_CYCLE": "Secondary — second cycle",
+      "TECHNICAL": "Technical education"
+    },
+    "shift": {
+      "MORNING": "Morning",
+      "AFTERNOON": "Afternoon",
+      "EVENING": "Evening"
+    },
+    "roomKind": {
+      "CLASSROOM": "Classroom",
+      "LABORATORY": "Laboratory",
+      "WORKSHOP": "Workshop",
+      "AUDITORIUM": "Auditorium",
+      "OTHER": "Other"
+    },
+    "dayOfWeek": {
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday",
+      "SUNDAY": "Sunday"
+    },
+    "scope": {
+      "CORE": "Core curriculum",
+      "SECTION": "Section",
+      "INTERNAL": "Internal curriculum"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "gradeLevels": {
+      "title": "Grade levels",
+      "subtitle": "Education levels, with their order and whether they have a national exam.",
+      "tableLabel": "List of grade levels",
+      "empty": "No grade levels yet",
+      "emptyHint": "Start by creating the grade levels the school teaches.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "order": "Order",
+        "cycle": "Cycle",
+        "isExamLevel": "National exam"
+      },
+      "create": {
+        "trigger": "Add grade level",
+        "title": "New grade level",
+        "description": "The code must be unique within the school.",
+        "fields": {
+          "code": "Code",
+          "name": "Name",
+          "order": "Order",
+          "cycle": "Education cycle",
+          "isExamLevel": "Grade level with national exam"
+        }
+      },
+      "errors": {
+        "code": "Enter a code",
+        "name": "Enter the name",
+        "order": "Enter the order",
+        "cycle": "Select the education cycle",
+        "isExamLevel": "Invalid value",
+        "duplicateCode": "A grade level with this code already exists"
+      }
+    },
+    "sections": {
+      "title": "Sections",
+      "subtitle": "Study areas, such as Sciences or Humanities.",
+      "tableLabel": "List of sections",
+      "empty": "No sections yet",
+      "emptyHint": "Grade levels without sections (primary and first cycle) don't need any.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "description": "Description"
+      },
+      "create": {
+        "trigger": "Add section",
+        "title": "New section",
+        "description": "The code must be unique within the school.",
+        "fields": {
+          "code": "Code",
+          "name": "Name",
+          "description": "Description"
+        }
+      },
+      "errors": {
+        "code": "Enter a code",
+        "name": "Enter the name",
+        "description": "Invalid description",
+        "duplicateCode": "A section with this code already exists"
+      }
+    },
+    "studyPaths": {
+      "title": "Study paths",
+      "subtitle": "Grade level + section, in the active academic year — this is where the student's subjects come from.",
+      "tableLabel": "List of study paths",
+      "empty": "No study paths yet",
+      "emptyHint": "A study path links a grade level (and, when applicable, a section) to the active academic year.",
+      "missingGradeLevel": "Create a grade level first",
+      "noSectionOption": "No section",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "gradeLevel": "Grade level",
+        "section": "Section"
+      },
+      "create": {
+        "trigger": "Add study path",
+        "title": "New study path",
+        "description": "Study paths without a section serve grade levels that don't have any (primary and first cycle).",
+        "fields": {
+          "gradeLevelId": "Grade level",
+          "sectionId": "Section",
+          "name": "Name"
+        }
+      },
+      "errors": {
+        "gradeLevelId": "Select the grade level",
+        "sectionId": "Invalid section",
+        "name": "Enter the name",
+        "noActiveYear": "There is no active academic year to create study paths",
+        "duplicate": "A study path for this grade level and section already exists this year"
+      }
+    },
+    "subjects": {
+      "title": "Subjects",
+      "subtitle": "School subjects, reusable across study paths.",
+      "tableLabel": "List of subjects",
+      "empty": "No subjects yet",
+      "emptyHint": "Subjects become available to every study path as soon as they are created.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "shortName": "Short name",
+        "area": "Area"
+      },
+      "create": {
+        "trigger": "Add subject",
+        "title": "New subject",
+        "description": "The code must be unique within the school.",
+        "fields": {
+          "code": "Code",
+          "name": "Name",
+          "shortName": "Short name",
+          "area": "Area"
+        }
+      },
+      "errors": {
+        "code": "Enter a code",
+        "name": "Enter the name",
+        "shortName": "Invalid short name",
+        "area": "Invalid area",
+        "duplicateCode": "A subject with this code already exists"
+      }
+    },
+    "curriculumSubjects": {
+      "title": "Subjects by study path",
+      "subtitle": "Subjects associated with study paths — core curriculum, section, or internal curriculum.",
+      "tableLabel": "List of subjects by study path",
+      "empty": "No subjects associated with study paths yet",
+      "emptyHint": "Associate subjects with a study path to define each one's weekly hours and coefficient.",
+      "missingStudyPath": "Create a study path first",
+      "missingSubject": "Create a subject first",
+      "columns": {
+        "studyPath": "Study path",
+        "subject": "Subject",
+        "scope": "Scope",
+        "weeklyHours": "Weekly hours",
+        "coefficient": "Coefficient",
+        "isExamSubject": "Exam subject"
+      },
+      "create": {
+        "trigger": "Associate subject",
+        "title": "Associate subject with study path",
+        "description": "The same subject can be associated with several study paths, each with its own coefficient.",
+        "fields": {
+          "studyPathId": "Study path",
+          "subjectId": "Subject",
+          "scope": "Scope",
+          "weeklyHours": "Weekly hours",
+          "coefficient": "Coefficient",
+          "isExamSubject": "Exam subject"
+        }
+      },
+      "errors": {
+        "studyPathId": "Select the study path",
+        "subjectId": "Select the subject",
+        "scope": "Select the scope",
+        "weeklyHours": "Enter the weekly hours",
+        "coefficient": "Enter a positive coefficient",
+        "isExamSubject": "Invalid value",
+        "duplicate": "This subject is already associated with this study path"
+      }
+    },
+    "classGroups": {
+      "title": "Classes",
+      "subtitle": "Classes in the active academic year — name, shift and capacity.",
+      "tableLabel": "List of classes",
+      "empty": "No classes yet",
+      "emptyHint": "Classes appear here as soon as they are created.",
+      "noHeadTeacherOption": "No homeroom teacher",
+      "columns": {
+        "name": "Name",
+        "shift": "Shift",
+        "capacity": "Capacity",
+        "headTeacher": "Homeroom teacher"
+      },
+      "create": {
+        "trigger": "Add class",
+        "title": "New class",
+        "description": "The class is associated with the active academic year.",
+        "fields": {
+          "name": "Name",
+          "shift": "Shift",
+          "capacity": "Capacity",
+          "headTeacherId": "Homeroom teacher"
+        }
+      },
+      "errors": {
+        "name": "Enter the name",
+        "shift": "Select the shift",
+        "capacity": "Enter the capacity",
+        "noActiveYear": "There is no active academic year to create classes",
+        "duplicateName": "A class with this name already exists this year"
+      }
+    },
+    "rooms": {
+      "title": "Rooms",
+      "subtitle": "The school's physical rooms, for the timetable.",
+      "tableLabel": "List of rooms",
+      "empty": "No rooms yet",
+      "emptyHint": "Rooms appear here as soon as they are created.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "capacity": "Capacity",
+        "kind": "Kind"
+      },
+      "create": {
+        "trigger": "Add room",
+        "title": "New room",
+        "description": "Capacity is informational only at this stage — it does not block timetable placements.",
+        "fields": {
+          "code": "Code",
+          "name": "Name",
+          "capacity": "Capacity",
+          "kind": "Kind"
+        }
+      },
+      "errors": {
+        "code": "Enter a code",
+        "name": "Enter the name",
+        "capacity": "Enter the capacity",
+        "kind": "Select the kind",
+        "duplicateCode": "A room with this code already exists"
+      }
+    },
+    "timeSlots": {
+      "title": "Time slots",
+      "subtitle": "Time slots for the active academic year, by day of week and shift.",
+      "tableLabel": "List of time slots",
+      "empty": "No time slots yet",
+      "emptyHint": "Time slots appear here as soon as they are created.",
+      "columns": {
+        "dayOfWeek": "Day",
+        "startTime": "Start",
+        "endTime": "End",
+        "shift": "Shift",
+        "order": "Order"
+      },
+      "create": {
+        "trigger": "Add time slot",
+        "title": "New time slot",
+        "description": "Associated with the active academic year.",
+        "fields": {
+          "dayOfWeek": "Day of week",
+          "startTime": "Start time",
+          "endTime": "End time",
+          "shift": "Shift",
+          "order": "Order"
+        }
+      },
+      "errors": {
+        "dayOfWeek": "Select the day of week",
+        "startTime": "Enter the start time, in HH:mm format",
+        "endTime": "Enter the end time, after the start time",
+        "shift": "Select the shift",
+        "order": "Enter the order",
+        "noActiveYear": "There is no active academic year to create time slots",
+        "duplicate": "An identical time slot already exists, on the same day and shift"
+      }
+    }
+  },
+  "scheduling": {
+    "errors": {
+      "forbidden": "You don't have permission to build the timetable",
+      "invalid": "The submitted data is not valid",
+      "noActiveYear": "There is no active academic year to build the timetable",
+      "noTeacherAssigned": "This teaching group doesn't have a teacher assigned yet"
+    },
+    "conflicts": {
+      "teacherDoubleBooked": "{teacher} already has {group} at this time",
+      "roomDoubleBooked": "This room is occupied by {group}",
+      "groupDoubleBooked": "This teaching group already has a class at this time",
+      "studentDoubleBooked": "{count, plural, one {# student already has {group} at this time} other {# students already have {group} at this time}}",
+      "raceCondition": "Someone else saved a conflicting placement in the meantime. Please try again."
+    },
+    "warnings": {
+      "maxWeeklyHoursExceeded": "This teacher now has {total} weekly hours, above the maximum of {max}."
+    },
+    "title": "Timetables",
+    "subtitle": "Timetable building — by class, teacher, or room.",
+    "board": {
+      "noTimeSlots": "There are no time slots defined yet. Create them in Academic structure before building the timetable.",
+      "viewBy": "View by",
+      "byClass": "Class",
+      "byTeacher": "Teacher",
+      "byRoom": "Room",
+      "viewEntity": "Choose",
+      "placeTrigger": "Place class",
+      "period": "Period",
+      "emptyCell": "Place a class in this period",
+      "placeTitle": "Place a class",
+      "editTitle": "Edit placement",
+      "placeDescription": "Academic year {year}. Conflicts appear here before saving.",
+      "fields": {
+        "teachingGroupId": "Teaching group",
+        "roomId": "Room",
+        "timeSlotId": "Time slot"
+      }
+    },
+    "view": {
+      "title": "My timetable",
+      "empty": "There are no classes in your timetable yet.",
+      "child": "Child",
+      "view": "View",
+      "noAccess": "This account doesn't have access to any timetable."
+    },
+    "print": {
+      "title": "Print a class timetable",
+      "subtitle": "Choose a class to view and print its weekly timetable.",
+      "classGroup": "Class",
+      "view": "View",
+      "trigger": "Print",
+      "empty": "This class doesn't have any classes placed in the timetable yet."
+    }
+  },
+  "teachingStaff": {
+    "title": "Teachers",
+    "subtitle": "Teachers and their assignments to classes and subjects.",
+    "tabs": {
+      "teachers": "Teachers",
+      "teachingGroups": "Assignments"
+    },
+    "scope": {
+      "CORE": "Core curriculum",
+      "SECTION": "Section",
+      "INTERNAL": "Internal curriculum"
+    },
+    "loginAccess": {
+      "yes": "Has access",
+      "no": "No access"
+    },
+    "teachers": {
+      "title": "Teachers",
+      "subtitle": "School teachers. Linking a login account is done separately.",
+      "tableLabel": "List of teachers",
+      "empty": "No teachers yet",
+      "emptyHint": "A teacher can be assigned to classes and subjects even without login access.",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "phone": "Phone",
+        "email": "Email",
+        "qualification": "Qualification",
+        "maxWeeklyHours": "Maximum weekly hours",
+        "hasLoginAccess": "Access"
+      },
+      "create": {
+        "trigger": "Add teacher",
+        "title": "New teacher",
+        "description": "The code must be unique within the school.",
+        "fields": {
+          "code": "Code",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "phone": "Phone",
+          "email": "Email",
+          "qualification": "Qualification",
+          "maxWeeklyHours": "Maximum weekly hours"
+        }
+      },
+      "errors": {
+        "code": "Enter a code",
+        "firstName": "Enter the first name",
+        "lastName": "Enter the last name",
+        "phone": "Invalid phone",
+        "email": "Enter a valid email",
+        "qualification": "Invalid qualification",
+        "maxWeeklyHours": "Enter a valid number of hours",
+        "duplicateCode": "A teacher with this code already exists"
+      }
+    },
+    "teachingGroups": {
+      "title": "Assignments",
+      "subtitle": "Teacher by subject and class, in the active academic year.",
+      "tableLabel": "List of assignments",
+      "empty": "No assignments yet",
+      "emptyHint": "Assign a teacher to a subject to associate it with the timetable.",
+      "missingSubject": "Create a subject first",
+      "missingTeacher": "Create a teacher first",
+      "columns": {
+        "name": "Name",
+        "subject": "Subject",
+        "teacher": "Teacher",
+        "classGroup": "Class",
+        "scope": "Scope"
+      },
+      "noClassGroup": "No class",
+      "create": {
+        "trigger": "Assign teacher",
+        "title": "New assignment",
+        "description": "The class is optional — leave it empty for section or internal-curriculum assignments.",
+        "fields": {
+          "name": "Assignment name",
+          "subjectId": "Subject",
+          "teacherId": "Teacher",
+          "classGroupId": "Class",
+          "scope": "Scope"
+        }
+      },
+      "errors": {
+        "name": "Enter a name",
+        "subjectId": "Select the subject",
+        "teacherId": "Select the teacher",
+        "classGroupId": "Invalid class",
+        "scope": "Select the scope",
+        "noActiveYear": "There is no active academic year to assign teachers",
+        "generic": "This assignment could not be created"
+      }
+    }
+  },
+  "assessmentSchemes": {
+    "title": "Assessment schemes",
+    "subtitle": "The formula for calculating averages by grade level and subject, including the exam regime.",
+    "tableLabel": "List of assessment schemes",
+    "empty": "No assessment schemes yet",
+    "emptyHint": "A scheme without a grade level or subject is the general scheme for the year.",
+    "generalScheme": "General for the year",
+    "columns": {
+      "name": "Name",
+      "version": "Version",
+      "regime": "Regime",
+      "gradeLevel": "Grade level",
+      "subject": "Subject",
+      "hasExam": "Has exam",
+      "componentCount": "Components"
+    },
+    "regime": {
+      "WITH_ASSESSMENT": "With assessment",
+      "WITHOUT_ASSESSMENT": "Without assessment"
+    },
+    "roundingMode": {
+      "NONE": "No rounding",
+      "HALF_UP": "Round up from 0.5",
+      "HALF_DOWN": "Round down from 0.5",
+      "CEIL": "Always round up",
+      "FLOOR": "Always round down"
+    },
+    "componentType": {
+      "CONTINUOUS": "Continuous assessment",
+      "TEST": "Test",
+      "PROJECT": "Project",
+      "PRACTICAL": "Practical",
+      "ORAL": "Oral"
+    },
+    "create": {
+      "trigger": "New scheme",
+      "title": "New assessment scheme",
+      "description": "A scheme without a grade level or subject applies to the whole year; a more specific one overrides it.",
+      "fields": {
+        "name": "Name",
+        "gradeLevelId": "Grade level (optional)",
+        "subjectId": "Subject (optional)",
+        "regime": "Regime",
+        "scaleMin": "Minimum scale",
+        "scaleMax": "Maximum scale",
+        "passMark": "Pass mark",
+        "roundingMode": "Rounding",
+        "decimalPlaces": "Decimal places",
+        "hasExam": "Has exam",
+        "examWeight": "Exam weight",
+        "minGradeForExam": "Minimum grade for exam admission",
+        "exemptionGrade": "Exam exemption average",
+        "minExamGrade": "Minimum exam grade"
+      },
+      "examWarning": "This field has not yet been validated with a real school — its exact behaviour is still to be confirmed.",
+      "components": {
+        "title": "Components",
+        "hint": "Component weights must add up to exactly 1.0000.",
+        "add": "Add component",
+        "remove": "Remove",
+        "code": "Code",
+        "name": "Name",
+        "type": "Type",
+        "weight": "Weight",
+        "minGrade": "Minimum grade (optional)"
+      }
+    },
+    "errors": {
+      "name": "Enter the name",
+      "gradeLevelId": "Invalid grade level",
+      "subjectId": "Invalid subject",
+      "regime": "Select the regime",
+      "scaleMin": "Enter the minimum scale",
+      "scaleMax": "Enter the maximum scale",
+      "passMark": "Enter the pass mark",
+      "roundingMode": "Select the rounding mode",
+      "decimalPlaces": "Enter the decimal places",
+      "hasExam": "Invalid value",
+      "examWeight": "Enter the exam weight",
+      "minGradeForExam": "Invalid grade",
+      "exemptionGrade": "Invalid grade",
+      "minExamGrade": "Invalid grade",
+      "components": "Invalid components",
+      "noActiveYear": "There is no active academic year to create assessment schemes",
+      "weightsDoNotSumToOne": "Component weights add up to {actual}, not 1.0000",
+      "noComponents": "A scheme with assessment needs at least one component",
+      "duplicateComponentCode": "The component code «{code}» is repeated",
+      "invalidScale": "Invalid scale: {detail}",
+      "examWeightWithoutExam": "An exam weight is set, but «Has exam» is off",
+      "thresholdOutOfScale": "The value of «{field}» is outside the defined scale"
+    }
+  },
+  "gradeEntry": {
+    "title": "Grades",
+    "subtitle": "Your teaching groups for the active academic year.",
+    "emptyGroups": "You don't have any teaching groups assigned yet.",
+    "noOpenTerm": "There is no open term at the moment.",
+    "noScheme": "There isn't an assessment scheme for this grade level/subject yet. Ask management to create one in Assessment.",
+    "emptyAssessments": "No assessments created for this term yet.",
+    "headTeacherView": "Class you direct",
+    "headTeacherReadOnlyNotice": "You're viewing this subject as the homeroom teacher — only the teacher of this subject can enter grades.",
+    "average": "Average",
+    "scoreLabel": "{name}'s score",
+    "absent": "Absent",
+    "saving": "Saving…",
+    "save": "Save",
+    "errors": {
+      "invalid": "The submitted data is not valid"
+    },
+    "create": {
+      "trigger": "New assessment",
+      "title": "New assessment",
+      "description": "A test or assignment within a component of the assessment scheme.",
+      "fields": {
+        "name": "Name",
+        "componentId": "Component",
+        "maxScore": "Maximum score",
+        "weight": "Weight",
+        "weightHint": "Weight of this assessment within the component, when the component has several.",
+        "date": "Date"
+      },
+      "errors": {
+        "teachingGroupId": "Invalid teaching group",
+        "termId": "Invalid term",
+        "componentId": "Select a component from this group's scheme",
+        "name": "Enter the name",
+        "maxScore": "Enter a positive maximum score",
+        "weight": "Enter a positive weight",
+        "date": "Enter a valid date"
+      }
+    },
+    "notes": {
+      "componentWithoutGrades": "Component {component} has no grades entered",
+      "weightsRenormalised": "Weights redistributed across components with grades",
+      "belowComponentMinimum": "Below the minimum required in {component}",
+      "exemptFromExam": "Exempt from exam",
+      "notAdmittedToExam": "Not admitted to exam",
+      "belowExamMinimum": "Below the minimum required in the exam",
+      "noGradesAtAll": "No grades entered"
+    }
+  },
+  "termClosing": {
+    "title": "Term closing",
+    "subtitle": "Materialises the term's report cards — once closed, the formula used stays frozen in the results.",
+    "empty": "There are no terms in the active academic year.",
+    "status": {
+      "OPEN": "Open",
+      "CLOSED": "Closed"
+    },
+    "trigger": "Close",
+    "confirmTitle": "Close {term}?",
+    "confirmDescription": "This calculates and saves the results for every subject and student this term. It cannot be reopened at this stage — make sure every grade has been entered.",
+    "cancel": "Cancel",
+    "closing": "Closing…",
+    "confirm": "Close term",
+    "errors": {
+      "invalid": "The submitted data is not valid",
+      "notFound": "Term not found",
+      "alreadyClosed": "This term is already closed"
+    }
+  },
+  "reportCards": {
+    "title": "Report cards",
+    "subtitle": "Results by class, subject and term, from closed terms.",
+    "classGroup": "Class",
+    "subject": "Subject",
+    "term": "Term",
+    "filter": "Filter",
+    "chooseFilters": "Choose a class, a subject and a term to see the report card.",
+    "notFound": "Could not find this class, subject or term.",
+    "termOpen": "This term hasn't been closed yet — the report card is only available after closing.",
+    "empty": "No students enrolled in this class.",
+    "student": "Student",
+    "average": "Average",
+    "finalScore": "Final score",
+    "situation": "Situation",
+    "pending": "Pending",
+    "passed": "Passed",
+    "failed": "Failed"
   }
 }

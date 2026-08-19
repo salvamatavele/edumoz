@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import { z, type ZodType } from "zod";
 
 /**
  * Descrição dos campos de um formulário dinâmico.
@@ -8,6 +8,24 @@ import type { ZodType } from "zod";
  * apresenta um campo: `z.string()` tanto pode ser um nome como um endereço longo ou uma
  * escolha entre opções. Esta descrição acrescenta essa camada, sem duplicar as regras.
  */
+
+/**
+ * Campo `kind: "number"` opcional.
+ *
+ * `FormModal`/`AssessmentSchemeForm` registam campos numéricos com `valueAsNumber: true`
+ * (ver `form-modal.tsx`); um campo vazio produz `NaN`, não `undefined` — é assim que o
+ * `react-hook-form` interpreta `Number("")`. `z.coerce.number().optional()` sozinho não
+ * apanha isto: `NaN` já É um número para o Zod, só não um válido. Este envólucro converte
+ * `NaN`/`""`/`null` para `undefined` antes da validação, para "deixar em branco" significar
+ * mesmo "sem valor".
+ */
+export function optionalNumberField(schema: ZodType<number>) {
+  return z.preprocess((value) => {
+    if (value === "" || value === null || value === undefined) return undefined;
+    if (typeof value === "number" && Number.isNaN(value)) return undefined;
+    return value;
+  }, schema.optional());
+}
 
 export type FieldKind =
   | "text"

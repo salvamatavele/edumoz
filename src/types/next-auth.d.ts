@@ -25,6 +25,12 @@ declare module "next-auth" {
     /** Papel NA escola activa. */
     role: Role | null;
     memberships: SessionMembership[];
+    /**
+     * Superadmin da plataforma — acesso total, a qualquer escola, sem depender de
+     * `Membership`. Lido uma vez no login (`User.isPlatformAdmin`); não muda ao trocar
+     * de escola, ao contrário de `role`.
+     */
+    isPlatformAdmin: boolean;
   }
 }
 
@@ -33,6 +39,7 @@ declare module "next-auth/jwt" {
     userId?: string;
     schoolId?: string | null;
     memberships?: SessionMembership[];
+    isPlatformAdmin?: boolean;
   }
 }
 

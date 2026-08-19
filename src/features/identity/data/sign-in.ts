@@ -153,6 +153,20 @@ export async function loadSessionMemberships(userId: string) {
   }));
 }
 
+/**
+ * `User.isPlatformAdmin`, para o `jwt` callback carregar no login. Separado de
+ * `loadSessionMemberships` porque um superadmin nem sempre tem `Membership` nenhuma —
+ * o seu acesso não depende de uma.
+ */
+export async function loadIsPlatformAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isPlatformAdmin: true },
+  });
+
+  return user?.isPlatformAdmin ?? false;
+}
+
 export async function findUserForCredentials(identifier: string) {
   const value = identifier.trim().toLowerCase();
 

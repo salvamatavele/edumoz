@@ -1,6 +1,7 @@
 # Spec — Presenças
 
-- **Estado:** Por aprovar
+- **Estado:** ✅ Implementado — ver [`CHANGELOG.md`](../../CHANGELOG.md) §Fase 6 e
+  [`openspec/changes/attendance/`](../../openspec/changes/attendance/)
 - **Depende de:** [`domain-foundation.md`](./domain-foundation.md), [`pending-fixes.md`](./pending-fixes.md)
 - **Âmbito:** marcação de presenças pelo professor e consulta pela direcção.
 
@@ -101,15 +102,17 @@ de educação que conteste uma exclusão por faltas.
 
 ## 5. Critérios de aceitação
 
-- [ ] Abrir uma sessão nova mostra todos os alunos como Presente
-- [ ] Alternar um aluno muda o ecrã sem esperar pelo servidor
-- [ ] Submeter grava numa só transacção, com os estados correctos
-- [ ] Um professor não consegue abrir a folha de um agrupamento que não é seu
-- [ ] Um agrupamento de Secção mostra alunos das duas turmas, e só os do percurso
-- [ ] Reabrir uma sessão submetida regista autor e alteração em `AuditLog`
-- [ ] A folha é utilizável a 375px com uma só mão
-- [ ] O sumário de faltas conta por disciplina, não por dia
-- [ ] `pnpm build`, `lint` e `test` verdes
+- [x] Abrir uma sessão nova mostra todos os alunos como Presente
+- [x] Alternar um aluno muda o ecrã sem esperar pelo servidor
+- [x] Submeter grava numa só transacção, com os estados correctos
+- [x] Um professor não consegue abrir a folha de um agrupamento que não é seu
+- [x] Um agrupamento de Secção mostra alunos das duas turmas, e só os do percurso —
+      garantido pela consulta partir de `TeachingGroupMember` (agnóstica ao `scope`), não
+      verificado manualmente com um agrupamento de Secção real
+- [x] Reabrir uma sessão submetida regista autor e alteração em `AuditLog`
+- [x] A folha é utilizável a 375px com uma só mão (verificado com toque real, não clique)
+- [x] O sumário de faltas conta por disciplina, não por dia
+- [x] `pnpm build`, `lint` e `test` verdes
 
 ---
 

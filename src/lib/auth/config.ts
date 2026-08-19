@@ -7,8 +7,10 @@ import {
   acceptInvitations,
   authoriseSignIn,
   findUserForCredentials,
+  loadIsPlatformAdmin,
   loadSessionMemberships,
 } from "@/features/identity/data/sign-in";
+import { resolveActiveSchool } from "@/features/identity/domain/access";
 import { prisma } from "@/lib/db/client";
 import type { Role } from "@/types";
 
@@ -25,6 +27,7 @@ type AppToken = {
   userId?: string;
   schoolId?: string | null;
   memberships?: Array<{ schoolId: string; schoolName: string; role: Role }>;
+  isPlatformAdmin?: boolean;
 };
 
 /**
@@ -119,16 +122,23 @@ export const authConfig = {
         app.userId = user.id;
         app.memberships = await loadSessionMemberships(user.id);
         app.schoolId = app.memberships[0]?.schoolId ?? null;
+        // Lido uma só vez, aqui — não muda com `trigger === "update"` (troca de escola).
+        // Um superadmin é superadmin em qualquer escola, sempre.
+        app.isPlatformAdmin = await loadIsPlatformAdmin(user.id);
       }
 
-      // Trocar de escola reemite o token com o papel dessa escola. A escola pedida é
-      // validada contra as Membership do token — sem isto, bastaria pedir a troca para
-      // qualquer schoolId e a sessão passaria a apontar para uma escola alheia.
+      // Trocar de escola reemite o token com o papel dessa escola. `resolveActiveSchool`
+      // valida a escola pedida contra as Membership do token — sem isto, bastaria pedir a
+      // troca para qualquer schoolId e a sessão passaria a apontar para uma escola alheia.
       const requested = (session as { schoolId?: unknown } | undefined)?.schoolId;
 
       if (trigger === "update" && typeof requested === "string") {
-        const allowed = app.memberships?.some((m) => m.schoolId === requested);
-        if (allowed) app.schoolId = requested;
+        app.schoolId = resolveActiveSchool(
+          app.memberships ?? [],
+          requested,
+          app.schoolId ?? null,
+          app.isPlatformAdmin ?? false,
+        );
       }
 
       return token;
@@ -142,6 +152,7 @@ export const authConfig = {
       session.memberships = app.memberships ?? [];
       session.role =
         app.memberships?.find((m) => m.schoolId === app.schoolId)?.role ?? null;
+      session.isPlatformAdmin = app.isPlatformAdmin ?? false;
 
       return session;
     },

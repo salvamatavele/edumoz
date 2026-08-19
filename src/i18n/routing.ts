@@ -43,6 +43,63 @@ export const routing = defineRouting({
       pt: "/alunos",
       en: "/students",
     },
+    "/portal": "/portal",
+    "/attendance": {
+      pt: "/presencas",
+      en: "/attendance",
+    },
+    "/attendance/[scheduleEntryId]": {
+      pt: "/presencas/[scheduleEntryId]",
+      en: "/attendance/[scheduleEntryId]",
+    },
+    "/attendance-report": {
+      pt: "/turmas/assiduidade",
+      en: "/attendance-report",
+    },
+    "/grades": {
+      pt: "/notas",
+      en: "/grades",
+    },
+    "/grades/[teachingGroupId]": {
+      pt: "/notas/[teachingGroupId]",
+      en: "/grades/[teachingGroupId]",
+    },
+    "/grades/[teachingGroupId]/[assessmentId]": {
+      pt: "/notas/[teachingGroupId]/[assessmentId]",
+      en: "/grades/[teachingGroupId]/[assessmentId]",
+    },
+    "/report-cards": {
+      pt: "/pautas",
+      en: "/report-cards",
+    },
+    "/academic": {
+      pt: "/academico",
+      en: "/academic",
+    },
+    "/teachers": {
+      pt: "/professores",
+      en: "/teachers",
+    },
+    "/assessment": {
+      pt: "/avaliacao",
+      en: "/assessment",
+    },
+    "/settings": {
+      pt: "/configuracao",
+      en: "/settings",
+    },
+    "/timetables": {
+      pt: "/horarios",
+      en: "/timetables",
+    },
+    "/timetables/teacher/[id]": {
+      pt: "/horarios/professor/[id]",
+      en: "/timetables/teacher/[id]",
+    },
+    "/my-timetable": {
+      pt: "/meu-horario",
+      en: "/my-timetable",
+    },
   },
 });
 
@@ -51,12 +108,37 @@ export const routing = defineRouting({
  * que o utilizador vê). O `proxy.ts` compara contra isto depois de retirar o prefixo de
  * língua, para a mesma regra valer em `/alunos` e em `/en/students`.
  */
-export const PROTECTED_PATHNAMES: readonly AppPathnameKey[] = ["/students"];
+export const PROTECTED_PATHNAMES: readonly AppPathnameKey[] = [
+  "/students",
+  "/portal",
+  "/attendance",
+  "/attendance/[scheduleEntryId]",
+  "/attendance-report",
+  "/grades",
+  "/grades/[teachingGroupId]",
+  "/grades/[teachingGroupId]/[assessmentId]",
+  "/report-cards",
+  "/academic",
+  "/teachers",
+  "/assessment",
+  "/settings",
+  "/timetables",
+  "/timetables/teacher/[id]",
+  "/my-timetable",
+];
 
 type AppPathnameKey = keyof (typeof routing)["pathnames"];
 
 export type Locale = (typeof routing.locales)[number];
 export type AppPathname = keyof typeof routing.pathnames;
+
+/**
+ * `AppPathname` sem as rotas com segmentos dinâmicos (`/attendance/[scheduleEntryId]`).
+ * Para listas de navegação (cabeçalho, barra lateral, rodapé) — nunca apontam para uma
+ * rota que precise de parâmetros por preencher. O `Link` do next-intl exige um `href`
+ * como `{ pathname, params }` para as dinâmicas; uma lista de ligações fixas não os tem.
+ */
+export type StaticAppPathname = Exclude<AppPathname, `${string}[${string}`>;
 
 /** pt-MZ e en-GB: o português é o de Moçambique, e as datas em inglês não são as dos EUA. */
 export const LOCALE_TAGS: Record<Locale, string> = {

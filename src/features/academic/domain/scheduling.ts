@@ -68,3 +68,17 @@ export interface ScheduleConflictCheck {
   readonly entries: readonly ScheduleEntryCandidate[];
   readonly memberships: readonly TeachingGroupMembership[];
 }
+
+/**
+ * Duração de um tempo lectivo, em horas (pode ser fraccionária — um tempo de 45 minutos
+ * conta 0.75). Usada para somar a carga horária semanal de um professor contra
+ * `Teacher.maxWeeklyHours`, que é sempre um aviso, nunca um bloqueio (ver design.md).
+ */
+export function timeSlotDurationHours(startTime: string, endTime: string): number {
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const minutes = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+
+  return minutes / 60;
+}

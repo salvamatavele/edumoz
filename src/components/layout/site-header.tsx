@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -9,14 +10,21 @@ import { Logo } from "@/components/layout/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Link, usePathname } from "@/i18n/navigation";
-import type { AppPathname } from "@/i18n/routing";
+import type { StaticAppPathname } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
 
-const NAV_ITEMS: ReadonlyArray<{ href: AppPathname; key: string }> = [
+const NAV_ITEMS: ReadonlyArray<{ href: StaticAppPathname; key: string }> = [
   { href: "/", key: "home" },
   { href: "/design-system", key: "designSystem" },
 ];
 
+/**
+ * Cabeçalho das páginas públicas — montra, sistema de design, login.
+ *
+ * Só isto: quem entra sai daqui para a casca do painel
+ * (`(dashboard)/layout.tsx`, `DashboardShell`), que tem a sua própria navegação por papel,
+ * selector de escola e botão de terminar sessão. Ver docs/specs/role-shell.md.
+ */
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   // `usePathname` do @/i18n/navigation devolve o caminho SEM prefixo de língua e na
@@ -25,6 +33,9 @@ export function SiteHeader() {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
+  const tAuth = useTranslations("auth");
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md">
@@ -65,6 +76,9 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
           <ThemeToggle />
+          <Button asChild variant="secondary" size="sm" className="hidden md:inline-flex">
+            <Link href="/students">{isAuthenticated ? tAuth("goToDashboard") : tAuth("signIn")}</Link>
+          </Button>
           <Button size="sm" className="hidden md:inline-flex">
             {tCommon("requestDemo")}
           </Button>
@@ -111,6 +125,14 @@ export function SiteHeader() {
                 </li>
               ))}
             </ul>
+            <Button
+              asChild
+              variant="secondary"
+              className="mt-3 w-full"
+              onClick={() => setOpen(false)}
+            >
+              <Link href="/students">{isAuthenticated ? tAuth("goToDashboard") : tAuth("signIn")}</Link>
+            </Button>
             <Button className="mt-3 w-full">{tCommon("requestDemo")}</Button>
           </nav>
         </div>
