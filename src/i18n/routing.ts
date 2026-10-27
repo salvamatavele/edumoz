@@ -100,6 +100,14 @@ export const routing = defineRouting({
       pt: "/meu-horario",
       en: "/my-timetable",
     },
+    "/finance": {
+      pt: "/financas",
+      en: "/finance",
+    },
+    "/finance/receipt/[id]": {
+      pt: "/financas/recibo/[id]",
+      en: "/finance/receipt/[id]",
+    },
   },
 });
 
@@ -125,6 +133,8 @@ export const PROTECTED_PATHNAMES: readonly AppPathnameKey[] = [
   "/timetables",
   "/timetables/teacher/[id]",
   "/my-timetable",
+  "/finance",
+  "/finance/receipt/[id]",
 ];
 
 type AppPathnameKey = keyof (typeof routing)["pathnames"];

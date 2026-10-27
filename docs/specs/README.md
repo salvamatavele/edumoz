@@ -16,7 +16,7 @@ requisitos, desenho e critérios de aceitação, aprovado antes de se escrever c
 | 7 | [`assessment-module.md`](./assessment-module.md) / [`assessment-grading`](../../openspec/changes/assessment-grading/) (OpenSpec) | ✅ Implementado (excepto nota de exame) | 2, 3, 4, 6 |
 | 8 | [`permissions-management`](../../openspec/changes/permissions-management/) (OpenSpec) | ✅ Implementado | 2, 3, 4 |
 | 9 | [`scheduling-module.md`](./scheduling-module.md) / [`scheduling-module`](../../openspec/changes/scheduling-module/) (OpenSpec) | ✅ Implementado | 2, 3, 4, 6 |
-| 10 | [`finance.md`](./finance.md) | 📋 Por aprovar | 2, 3, 4 |
+| 10 | [`finance.md`](./finance.md) / [`finance`](../../openspec/changes/finance/) (OpenSpec) | ✅ Implementado | 2, 3, 4 |
 | 11 | [`digital-identity.md`](./digital-identity.md) | 📋 Por aprovar | 2, 3, 4, 7 |
 
 **Ordem recomendada:** 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11.
@@ -66,6 +66,14 @@ unitário tinha coberto — a grelha de consulta/impressão colapsava para uma s
 duas aulas simultâneas de subgrupos diferentes caíam na mesma célula, o caso central de
 uma turma mista com Secções em paralelo (ver CHANGELOG, Fase 10).
 
+O 10 (Finanças) implementou o schema por inteiro pela primeira vez — `FeeSchedule`,
+`FeeItem`, `Invoice`, `Payment` já existiam desde a Fase 2, mas nenhuma Server Action, leitura
+ou ecrã os tinha tocado. A porta `MobileMoneyGateway` também já estava desenhada; esta
+fase entregou-lhe uma implementação simulada (`SimulatedGateway`), nunca um operador real
+— isso fica para quando a escola tiver credenciais (ver `finance.md` §5). Ficou dividido
+em quatro capabilities pela mesma razão do 9: `payments`, a superfície de maior risco, é
+mais fácil de rever isolada das outras três.
+
 ## O que já está construído e pode ser reutilizado
 
 Antes de escrever um módulo novo, vale a pena saber o que já existe:
@@ -82,7 +90,9 @@ Antes de escrever um módulo novo, vale a pena saber o que já existe:
 | Conflitos de horário | `src/features/academic/domain/schedule-conflicts.ts` | `conflictsForPlacement`, pura e testada — corre no cliente (`ScheduleBoard`) e no servidor (`placeScheduleEntry`), nunca duas implementações |
 | Consulta de horário | `src/features/academic/ui/schedule-view.tsx` | Grelha (dias × tempos) + lista empilhada por telemóvel, só leitura — usada por `/meu-horario` e pela impressão de turma em `/horarios` |
 | `Money` / `Score` | `src/features/shared/domain/numeric.ts` | Aritmética exacta. **Nunca usar `number`** |
-| Porta de dinheiro móvel | `src/features/finance/domain/ports/` | Interface para m-Pesa, e-Mola, mKesh |
+| Porta de dinheiro móvel | `src/features/finance/domain/ports/` | Interface para m-Pesa, e-Mola, mKesh; `SimulatedGateway` (`data/gateways/`) implementa-a para desenvolvimento |
+| Máquina de estados de pagamento | `src/features/finance/domain/payment-state.ts` | `canTransition`, pura e testada — só as transições válidas de `PaymentStatus` |
+| Recálculo do saldo de uma factura | `src/features/finance/domain/invoice-balance.ts` | `recalculateInvoiceBalance` — sempre por agregação dos `Payment`s `CONFIRMED`, nunca por incremento |
 | Argon2id | `src/lib/auth/password.ts` | Hash e verificação de palavras-passe |
 
 ## Regras que valem para todos os specs

@@ -68,6 +68,7 @@ export default async function DashboardLayout({
       { href: "/teachers", label: t("nav.teachers") },
       { href: "/assessment", label: t("nav.assessment") },
       { href: "/timetables", label: t("nav.timetables") },
+      { href: "/finance", label: t("nav.finance") },
       { href: "/settings", label: t("nav.settings") },
     ];
   } else {

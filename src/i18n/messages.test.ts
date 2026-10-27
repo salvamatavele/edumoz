@@ -78,6 +78,10 @@ describe("catálogos de mensagens", () => {
       "assessmentSchemes.columns.regime",
       "assessmentSchemes.componentType.ORAL",
       "assessmentSchemes.create.fields.regime",
+      "finance.invoicing.debtReport.total",
+      "finance.payments.providers.MPESA",
+      "finance.payments.providers.EMOLA",
+      "finance.payments.providers.MKESH",
     ]);
 
     const untranslated = flatten(pt as Tree).filter((key) => {

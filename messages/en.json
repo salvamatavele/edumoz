@@ -38,7 +38,8 @@
     "grades": "Grades",
     "reportCards": "Report cards",
     "timetables": "Timetables",
-    "myTimetable": "My timetable"
+    "myTimetable": "My timetable",
+    "finance": "Finance"
   },
   "home": {
     "badge": "Built for Mozambican schools",
@@ -241,6 +242,10 @@
   "portal": {
     "title": "Welcome to EduMoz",
     "comingSoon": "Your features are coming in the next modules.",
+    "tabs": {
+      "grades": "Grades",
+      "finance": "Finance"
+    },
     "grades": {
       "title": "My grades",
       "child": "Child",
@@ -255,6 +260,14 @@
       "pending": "Pending",
       "passed": "Passed",
       "failed": "Failed"
+    },
+    "finance": {
+      "title": "My fees",
+      "child": "Child",
+      "view": "View",
+      "noAccess": "There is no fee information to show yet.",
+      "empty": "There are no invoices yet.",
+      "balance": "Outstanding balance"
     }
   },
   "roles": {
@@ -725,6 +738,213 @@
       "view": "View",
       "trigger": "Print",
       "empty": "This class doesn't have any classes placed in the timetable yet."
+    }
+  },
+  "finance": {
+    "title": "Finance",
+    "subtitle": "Fee schedules, invoicing, and payments.",
+    "tabs": {
+      "feeSchedules": "Fee schedules",
+      "feeItems": "Fee items",
+      "invoicing": "Invoicing",
+      "payments": "Payments"
+    },
+    "recurrence": {
+      "MONTHLY": "Monthly",
+      "TERM": "Termly",
+      "ANNUAL": "Annual",
+      "ONE_OFF": "One-off"
+    },
+    "invoiceStatus": {
+      "PENDING": "Pending",
+      "PARTIAL": "Partial",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue",
+      "CANCELLED": "Cancelled"
+    },
+    "errors": {
+      "invalid": "The submitted data is not valid",
+      "noItemsForPeriod": "This schedule has no items for this period type",
+      "noEnrollments": "There are no active enrollments covered by this schedule"
+    },
+    "invoicing": {
+      "generateTitle": "Generate invoices in bulk",
+      "generateTrigger": "Generate invoices",
+      "generateResult": "{created, plural, =0 {No new invoices} one {# invoice created} other {# invoices created}}. {skipped, plural, =0 {} one {# already existed.} other {# already existed.}}",
+      "periodMonthHelper": "Leave blank for termly, annual, or one-off items",
+      "debtReportTitle": "Outstanding fees report",
+      "debtReportChooseFilters": "Choose a class and a period to view the outstanding fees report.",
+      "debtReportEmpty": "There are no outstanding invoices for this class and period.",
+      "fields": {
+        "feeScheduleId": "Fee schedule",
+        "periodYear": "Year",
+        "periodMonth": "Month",
+        "classGroup": "Class",
+        "search": "Search"
+      },
+      "debtReport": {
+        "student": "Student",
+        "reference": "Reference",
+        "total": "Total",
+        "paidAmount": "Paid",
+        "status": "Status"
+      },
+      "account": {
+        "balance": "Outstanding balance",
+        "empty": "This student doesn't have any invoices yet."
+      }
+    },
+    "feeSchedules": {
+      "subtitle": "Fee schedules for the active academic year, with an optional scope by grade level or study path.",
+      "tableLabel": "List of fee schedules",
+      "empty": "No fee schedules yet",
+      "emptyHint": "Fee schedules appear here as soon as they are created.",
+      "wholeSchool": "Whole school",
+      "columns": {
+        "name": "Name",
+        "gradeLevel": "Grade level",
+        "studyPath": "Study path",
+        "itemCount": "Items"
+      },
+      "create": {
+        "trigger": "Add schedule",
+        "title": "New fee schedule",
+        "description": "Associated with the active academic year.",
+        "fields": {
+          "name": "Name",
+          "gradeLevelId": "Grade level",
+          "studyPathId": "Study path"
+        }
+      },
+      "errors": {
+        "name": "Enter the name",
+        "noActiveYear": "There is no active academic year to create fee schedules"
+      }
+    },
+    "feeItems": {
+      "subtitle": "Fee items for all fee schedules in the active academic year.",
+      "tableLabel": "List of fee items",
+      "empty": "No fee items yet",
+      "emptyHint": "Fee items appear here as soon as they are created.",
+      "missingFeeSchedule": "Create a fee schedule first",
+      "columns": {
+        "feeSchedule": "Schedule",
+        "code": "Code",
+        "name": "Name",
+        "amount": "Amount",
+        "recurrence": "Recurrence",
+        "isMandatory": "Mandatory"
+      },
+      "create": {
+        "trigger": "Add item",
+        "title": "New fee item",
+        "description": "A fee item always belongs to a fee schedule.",
+        "fields": {
+          "feeScheduleId": "Fee schedule",
+          "code": "Code",
+          "name": "Name",
+          "amount": "Amount (MZN)",
+          "recurrence": "Recurrence",
+          "dueDayOfMonth": "Due day",
+          "isMandatory": "Mandatory"
+        }
+      },
+      "errors": {
+        "feeScheduleId": "Select the fee schedule",
+        "code": "Enter a code",
+        "name": "Enter the name",
+        "amount": "Enter a positive amount",
+        "recurrence": "Select the recurrence",
+        "dueDayOfMonth": "Enter a day between 1 and 31",
+        "isMandatory": "Invalid value",
+        "duplicateCode": "A fee item with this code already exists in this schedule"
+      }
+    },
+    "payments": {
+      "manageTrigger": "Payments",
+      "selectInvoiceHint": "Choose an invoice from the outstanding fees report or a student's account to manage its payments.",
+      "manualTitle": "Record manual payment",
+      "manualTrigger": "Record payment",
+      "manualSuccess": "Payment recorded and confirmed.",
+      "mobileMoneyTitle": "Start mobile money payment",
+      "mobileMoneyTrigger": "Start payment",
+      "mobileMoneySuccess": "Request sent to the operator.",
+      "mobileMoneyDescription": "Payment for invoice {reference}",
+      "tableTitle": "Payments for this invoice",
+      "empty": "This invoice has no payments yet.",
+      "fields": {
+        "amount": "Amount (MZN)",
+        "method": "Method",
+        "provider": "Provider",
+        "payerPhone": "Payer's phone number"
+      },
+      "methods": {
+        "CASH": "Cash",
+        "BANK_DEPOSIT": "Bank deposit",
+        "BANK_TRANSFER": "Bank transfer",
+        "MOBILE_MONEY": "Mobile money"
+      },
+      "providers": {
+        "MPESA": "M-Pesa",
+        "EMOLA": "e-Mola",
+        "MKESH": "mKesh"
+      },
+      "status": {
+        "INITIATED": "Initiated",
+        "PENDING": "Pending",
+        "CONFIRMED": "Confirmed",
+        "FAILED": "Failed",
+        "REVERSED": "Reversed"
+      },
+      "columns": {
+        "method": "Method",
+        "amount": "Amount",
+        "status": "Status",
+        "date": "Date",
+        "actions": "Actions"
+      },
+      "actions": {
+        "confirm": "Confirm",
+        "reverse": "Reverse",
+        "receipt": "Receipt"
+      },
+      "reverseDialog": {
+        "title": "Reverse payment",
+        "description": "This doesn't delete the payment — it stays on record as reversed, with the reason given.",
+        "reasonLabel": "Reason",
+        "cancel": "Cancel",
+        "confirm": "Reverse",
+        "confirming": "Reversing…"
+      },
+      "errors": {
+        "invalid": "The submitted data is not valid",
+        "invoiceId": "Invalid invoice",
+        "amount": "Enter a positive amount",
+        "method": "Select the method",
+        "provider": "Select the provider",
+        "payerPhone": "Enter the payer's phone number",
+        "paymentId": "Invalid payment",
+        "reason": "Enter the reason for the reversal",
+        "invoiceNotFound": "Invoice not found",
+        "invoiceCancelled": "This invoice is cancelled",
+        "nothingOwed": "This invoice has no outstanding balance",
+        "paymentNotFound": "Payment not found",
+        "cannotReverse": "Only a confirmed payment can be reversed",
+        "gatewayFailure": "Could not reach the operator. The request was already recorded — try confirming later."
+      }
+    },
+    "receipt": {
+      "title": "Payment receipt",
+      "printTrigger": "Print",
+      "studentLabel": "Student",
+      "invoiceLabel": "Invoice",
+      "amountLabel": "Amount",
+      "methodLabel": "Method",
+      "dateLabel": "Date",
+      "statusLabel": "Status",
+      "verificationLabel": "Verification code",
+      "reversedNotice": "This payment was reversed — it is not valid as proof of payment.",
+      "notFound": "Receipt not found."
     }
   },
   "teachingStaff": {

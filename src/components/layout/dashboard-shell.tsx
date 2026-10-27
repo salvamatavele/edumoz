@@ -14,6 +14,7 @@ import {
   NotebookPen,
   Settings,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -54,6 +55,7 @@ const NAV_ICONS: Partial<Record<StaticAppPathname, LucideIcon>> = {
   "/settings": Settings,
   "/timetables": CalendarClock,
   "/my-timetable": CalendarClock,
+  "/finance": Wallet,
 };
 
 function iconFor(href: StaticAppPathname): LucideIcon {

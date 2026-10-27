@@ -1,8 +1,13 @@
 # Spec — Finanças e propinas
 
-- **Estado:** Por aprovar
+- **Estado:** ✅ Implementado
 - **Depende de:** [`domain-foundation.md`](./domain-foundation.md), [`pending-fixes.md`](./pending-fixes.md)
 - **Âmbito:** tabelas de propinas, facturação, pagamentos e integração com dinheiro móvel.
+- **Implementado via OpenSpec:** change `finance` (capabilities `fee-schedules`,
+  `invoicing`, `payments`, `family-finance-portal`). Ver `openspec/changes/` (activos e
+  arquivados) e `docs/specs/README.md`. Os adaptadores reais dos operadores (m-Pesa/
+  e-Mola/mKesh) continuam por fazer — esta fase entregou um `SimulatedGateway` atrás da
+  mesma porta (ver §5).
 
 ---
 

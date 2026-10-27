@@ -38,7 +38,8 @@
     "grades": "Notas",
     "reportCards": "Pautas",
     "timetables": "Horários",
-    "myTimetable": "O meu horário"
+    "myTimetable": "O meu horário",
+    "finance": "Finanças"
   },
   "home": {
     "badge": "Feito para escolas moçambicanas",
@@ -241,6 +242,10 @@
   "portal": {
     "title": "Bem-vindo ao EduMoz",
     "comingSoon": "As suas funcionalidades chegam nos próximos módulos.",
+    "tabs": {
+      "grades": "Notas",
+      "finance": "Finanças"
+    },
     "grades": {
       "title": "As minhas notas",
       "child": "Educando",
@@ -255,6 +260,14 @@
       "pending": "Pendente",
       "passed": "Aprovado",
       "failed": "Reprovado"
+    },
+    "finance": {
+      "title": "As minhas propinas",
+      "child": "Educando",
+      "view": "Ver",
+      "noAccess": "Ainda não há informação de propinas para mostrar.",
+      "empty": "Ainda não há nenhuma factura.",
+      "balance": "Saldo em dívida"
     }
   },
   "roles": {
@@ -725,6 +738,213 @@
       "view": "Ver",
       "trigger": "Imprimir",
       "empty": "Esta turma ainda não tem nenhuma aula colocada no horário."
+    }
+  },
+  "finance": {
+    "title": "Finanças",
+    "subtitle": "Tabelas de propinas, facturação e pagamentos.",
+    "tabs": {
+      "feeSchedules": "Tabelas de propinas",
+      "feeItems": "Rubricas",
+      "invoicing": "Facturação",
+      "payments": "Pagamentos"
+    },
+    "recurrence": {
+      "MONTHLY": "Mensal",
+      "TERM": "Trimestral",
+      "ANNUAL": "Anual",
+      "ONE_OFF": "Único"
+    },
+    "invoiceStatus": {
+      "PENDING": "Pendente",
+      "PARTIAL": "Parcial",
+      "PAID": "Paga",
+      "OVERDUE": "Em atraso",
+      "CANCELLED": "Cancelada"
+    },
+    "errors": {
+      "invalid": "Os dados enviados não são válidos",
+      "noItemsForPeriod": "Esta tabela não tem rubricas para este tipo de período",
+      "noEnrollments": "Não há matrículas activas abrangidas por esta tabela"
+    },
+    "invoicing": {
+      "generateTitle": "Gerar facturas em lote",
+      "generateTrigger": "Gerar facturas",
+      "generateResult": "{created, plural, =0 {Nenhuma factura nova} one {# factura criada} other {# facturas criadas}}. {skipped, plural, =0 {} one {# já existia.} other {# já existiam.}}",
+      "periodMonthHelper": "Em branco para rubricas trimestrais, anuais ou únicas",
+      "debtReportTitle": "Mapa de propinas em dívida",
+      "debtReportChooseFilters": "Escolha uma turma e um período para ver o mapa de dívida.",
+      "debtReportEmpty": "Não há facturas em dívida para esta turma e período.",
+      "fields": {
+        "feeScheduleId": "Tabela de propinas",
+        "periodYear": "Ano",
+        "periodMonth": "Mês",
+        "classGroup": "Turma",
+        "search": "Procurar"
+      },
+      "debtReport": {
+        "student": "Aluno",
+        "reference": "Referência",
+        "total": "Total",
+        "paidAmount": "Pago",
+        "status": "Estado"
+      },
+      "account": {
+        "balance": "Saldo em dívida",
+        "empty": "Este aluno ainda não tem nenhuma factura."
+      }
+    },
+    "feeSchedules": {
+      "subtitle": "Tabelas de propinas do ano lectivo activo, com âmbito opcional por classe ou percurso.",
+      "tableLabel": "Lista de tabelas de propinas",
+      "empty": "Ainda não há tabelas de propinas registadas",
+      "emptyHint": "As tabelas de propinas aparecem aqui assim que forem criadas.",
+      "wholeSchool": "Toda a escola",
+      "columns": {
+        "name": "Nome",
+        "gradeLevel": "Classe",
+        "studyPath": "Percurso",
+        "itemCount": "Rubricas"
+      },
+      "create": {
+        "trigger": "Adicionar tabela",
+        "title": "Nova tabela de propinas",
+        "description": "Associada ao ano lectivo activo.",
+        "fields": {
+          "name": "Nome",
+          "gradeLevelId": "Classe",
+          "studyPathId": "Percurso"
+        }
+      },
+      "errors": {
+        "name": "Indique o nome",
+        "noActiveYear": "Não há um ano lectivo activo para criar tabelas de propinas"
+      }
+    },
+    "feeItems": {
+      "subtitle": "Rubricas de todas as tabelas de propinas do ano lectivo activo.",
+      "tableLabel": "Lista de rubricas",
+      "empty": "Ainda não há rubricas registadas",
+      "emptyHint": "As rubricas aparecem aqui assim que forem criadas.",
+      "missingFeeSchedule": "Crie primeiro uma tabela de propinas",
+      "columns": {
+        "feeSchedule": "Tabela",
+        "code": "Código",
+        "name": "Nome",
+        "amount": "Valor",
+        "recurrence": "Recorrência",
+        "isMandatory": "Obrigatória"
+      },
+      "create": {
+        "trigger": "Adicionar rubrica",
+        "title": "Nova rubrica",
+        "description": "Uma rubrica pertence sempre a uma tabela de propinas.",
+        "fields": {
+          "feeScheduleId": "Tabela de propinas",
+          "code": "Código",
+          "name": "Nome",
+          "amount": "Valor (MT)",
+          "recurrence": "Recorrência",
+          "dueDayOfMonth": "Dia de vencimento",
+          "isMandatory": "Obrigatória"
+        }
+      },
+      "errors": {
+        "feeScheduleId": "Seleccione a tabela de propinas",
+        "code": "Indique um código",
+        "name": "Indique o nome",
+        "amount": "Indique um valor positivo",
+        "recurrence": "Seleccione a recorrência",
+        "dueDayOfMonth": "Indique um dia entre 1 e 31",
+        "isMandatory": "Valor inválido",
+        "duplicateCode": "Já existe uma rubrica com este código nesta tabela"
+      }
+    },
+    "payments": {
+      "manageTrigger": "Pagamentos",
+      "selectInvoiceHint": "Escolha uma factura no mapa de dívida ou na conta-corrente de um aluno para gerir os seus pagamentos.",
+      "manualTitle": "Registar pagamento manual",
+      "manualTrigger": "Registar pagamento",
+      "manualSuccess": "Pagamento registado e confirmado.",
+      "mobileMoneyTitle": "Iniciar dinheiro móvel",
+      "mobileMoneyTrigger": "Iniciar pagamento",
+      "mobileMoneySuccess": "Pedido enviado ao operador.",
+      "mobileMoneyDescription": "Pagamento da factura {reference}",
+      "tableTitle": "Pagamentos desta factura",
+      "empty": "Esta factura ainda não tem nenhum pagamento.",
+      "fields": {
+        "amount": "Valor (MT)",
+        "method": "Método",
+        "provider": "Operador",
+        "payerPhone": "Número do pagador"
+      },
+      "methods": {
+        "CASH": "Numerário",
+        "BANK_DEPOSIT": "Depósito bancário",
+        "BANK_TRANSFER": "Transferência bancária",
+        "MOBILE_MONEY": "Dinheiro móvel"
+      },
+      "providers": {
+        "MPESA": "M-Pesa",
+        "EMOLA": "e-Mola",
+        "MKESH": "mKesh"
+      },
+      "status": {
+        "INITIATED": "Iniciado",
+        "PENDING": "Pendente",
+        "CONFIRMED": "Confirmado",
+        "FAILED": "Falhou",
+        "REVERSED": "Revertido"
+      },
+      "columns": {
+        "method": "Método",
+        "amount": "Valor",
+        "status": "Estado",
+        "date": "Data",
+        "actions": "Acções"
+      },
+      "actions": {
+        "confirm": "Confirmar",
+        "reverse": "Reverter",
+        "receipt": "Recibo"
+      },
+      "reverseDialog": {
+        "title": "Reverter pagamento",
+        "description": "Esta acção não apaga o pagamento — fica registado como revertido, com o motivo indicado.",
+        "reasonLabel": "Motivo",
+        "cancel": "Cancelar",
+        "confirm": "Reverter",
+        "confirming": "A reverter…"
+      },
+      "errors": {
+        "invalid": "Os dados enviados não são válidos",
+        "invoiceId": "Factura inválida",
+        "amount": "Indique um valor positivo",
+        "method": "Seleccione o método",
+        "provider": "Seleccione o operador",
+        "payerPhone": "Indique o número do pagador",
+        "paymentId": "Pagamento inválido",
+        "reason": "Indique o motivo da reversão",
+        "invoiceNotFound": "Factura não encontrada",
+        "invoiceCancelled": "Esta factura está cancelada",
+        "nothingOwed": "Esta factura já não tem nenhum valor em dívida",
+        "paymentNotFound": "Pagamento não encontrado",
+        "cannotReverse": "Só é possível reverter um pagamento confirmado",
+        "gatewayFailure": "Não foi possível contactar o operador. O pedido já ficou registado — tente confirmar mais tarde."
+      }
+    },
+    "receipt": {
+      "title": "Recibo de pagamento",
+      "printTrigger": "Imprimir",
+      "studentLabel": "Aluno",
+      "invoiceLabel": "Factura",
+      "amountLabel": "Valor",
+      "methodLabel": "Método",
+      "dateLabel": "Data",
+      "statusLabel": "Estado",
+      "verificationLabel": "Código de verificação",
+      "reversedNotice": "Este pagamento foi revertido — não é válido como prova de pagamento.",
+      "notFound": "Recibo não encontrado."
     }
   },
   "teachingStaff": {

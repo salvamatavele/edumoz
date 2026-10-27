@@ -2,6 +2,55 @@
 
 ## [Não publicado]
 
+## Fase 11 — Finanças: propinas, facturação, pagamentos e portal da família
+
+Change (OpenSpec): [`openspec/changes/finance/`](openspec/changes/finance/).
+
+### Adicionado
+
+- **`/financas` (gestor)** — quatro separadores: tabelas de propinas e rubricas (CRUD
+  simples, mesmo molde de `EntitySection`); facturação em lote, idempotente por
+  `(matrícula, tabela, período)` — correr duas vezes não duplica; mapa de dívida por
+  turma/período e conta-corrente por aluno, ambos por formulário GET sem JavaScript;
+  pagamentos — registar manual (já `CONFIRMED`), iniciar dinheiro móvel, confirmar,
+  reverter (motivo obrigatório, nunca apaga o registo).
+- **`SimulatedGateway`** — implementação de `MobileMoneyGateway` com quatro caminhos
+  escolhidos pelo `payerPhone` de teste: sucesso imediato, falha imediata, timeout
+  (nunca resolve) e o caminho real — pendente, e só confirmado numa segunda consulta.
+  Fica atrás da mesma porta hexagonal já desenhada; os operadores reais entram sem tocar
+  no domínio nem nas Server Actions.
+- **Recibo imprimível** (`/financas/recibo/[id]`), com código de verificação e aviso
+  claro quando o pagamento foi revertido.
+- **Separador "Finanças" em `/portal`**, ao lado de "Notas" — saldo em dívida e mapa de
+  facturas do próprio aluno ou do educando escolhido, dois separadores GET
+  (`?tab=grades|finance`) sem JavaScript.
+- Sessenta e quatro testes novos entre domínio, dados, acções e portal.
+
+### Decisões
+
+- **Quatro capabilities** — `fee-schedules`, `invoicing`, `payments` (a superfície de
+  maior risco, por isso isolada), `family-finance-portal` — mesma lógica de
+  `assessment-grading`/`scheduling-module`.
+- **Máquina de estados de `Payment` como função pura testada primeiro**
+  (`canTransition`, `domain/payment-state.ts`), sem nenhum chamador até `payments` estar
+  pronto a usá-la — mesmo padrão de `conflictsForPlacement`.
+- **`Invoice.paidAmount`/`status` recalculam-se sempre por agregação, nunca por
+  incremento** — `recalculateInvoiceBalance` (pura, testada à parte) soma os `Payment`s
+  `CONFIRMED` de novo a cada mudança de estado, em vez de somar/subtrair ao valor
+  anterior. Um incremento que corra duas vezes por engano diverge para sempre; uma soma
+  recalculada converge sempre para o valor certo.
+- **`idempotencyKey` gerada pelo EduMoz, gravada ANTES de contactar o operador** — o
+  `Payment` fica em `INITIATED` mesmo que o pedido ao operador falhe ou nunca volte,
+  nunca em limbo entre "talvez enviado, talvez não".
+
+### Corrigido durante a implementação (antes de qualquer teste correr)
+
+- Soma de rubricas em `generate-invoices.ts` usava `Number(item.amount)` — reintroduzia
+  vírgula flutuante em dinheiro; substituída por `sum()`/`toDecimal()`
+  (`shared/domain/numeric.ts`).
+- `getStudentAccount` calculava um saldo zero inicial com um truque feio de instanciar
+  `Decimal` a partir do construtor de outra instância; substituído por `sum(...).toFixed(2)`.
+
 ## Fase 10 — Horários: montagem, conflitos, consulta e impressão
 
 Change (OpenSpec): [`openspec/changes/scheduling-module/`](openspec/changes/scheduling-module/).
