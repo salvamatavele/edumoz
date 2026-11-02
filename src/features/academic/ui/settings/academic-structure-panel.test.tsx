@@ -32,9 +32,10 @@ const emptyOptions: AcademicStructureOptions = {
   hasActiveAcademicYear: false,
 };
 
-function renderPanel() {
+function renderPanel(canCreate = true) {
   renderWithIntl(
     <AcademicStructurePanel
+      canCreate={canCreate}
       gradeLevels={[]}
       sections={[]}
       studyPaths={{ rows: [], academicYear: null }}
@@ -49,6 +50,11 @@ function renderPanel() {
 }
 
 describe("AcademicStructurePanel — Classes", () => {
+  it("permite consultar sem oferecer criação a um leitor", () => {
+    renderPanel(false);
+    expect(screen.queryByRole("button", { name: "Adicionar classe" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Classes" })).toBeInTheDocument();
+  });
   it("abre o modal ao clicar em Adicionar classe", async () => {
     renderPanel();
 

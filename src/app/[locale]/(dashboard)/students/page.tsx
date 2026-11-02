@@ -4,12 +4,13 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { listEnrollmentOptions, listUnenrolledStudents } from "@/features/academic/data/enrollments";
 import { listEnrolledStudents } from "@/features/academic/data/students";
 import { CreateStudentButton } from "@/features/academic/ui/create-student-button";
+import { AccessDenied } from "@/components/layout/access-denied";
 import { StudentsTable } from "@/features/academic/ui/students-table";
 import { UnenrolledStudentsTable } from "@/features/academic/ui/unenrolled-students-table";
 import {
   isFamilyRole,
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "@/lib/auth/config";
@@ -53,20 +54,18 @@ export default async function StudentsPage({ params }: PageProps<"/[locale]/stud
     redirect({ href: "/portal", locale });
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  const isAdmin = isSchoolAdministrator(context);
+  if (!hasPermission(context, "students", "view")) {
+    return <AccessDenied message={t("auth.noAccess")} />;
+  }
+  const canCreateStudent = hasPermission(context, "students", "create");
+  const canEnroll = hasPermission(context, "enrollments", "create");
 
   const [{ rows, academicYear }, unenrolled, enrollmentOptions] = await Promise.all([
     listEnrolledStudents(session.schoolId),
-    isAdmin ? listUnenrolledStudents(session.schoolId) : Promise.resolve({ rows: [], academicYear: null }),
-    isAdmin ? listEnrollmentOptions(session.schoolId) : Promise.resolve(null),
+    canEnroll ? listUnenrolledStudents(session.schoolId) : Promise.resolve({ rows: [], academicYear: null }),
+    canEnroll ? listEnrollmentOptions(session.schoolId) : Promise.resolve(null),
   ]);
 
   return (
@@ -79,12 +78,12 @@ export default async function StudentsPage({ params }: PageProps<"/[locale]/stud
           </p>
         </div>
 
-        {isAdmin ? <CreateStudentButton /> : null}
+        {canCreateStudent ? <CreateStudentButton /> : null}
       </div>
 
       <StudentsTable rows={rows} />
 
-      {isAdmin && enrollmentOptions && unenrolled.rows.length > 0 ? (
+      {canEnroll && enrollmentOptions && unenrolled.rows.length > 0 ? (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-semibold">{t("students.enroll.sectionTitle")}</h2>

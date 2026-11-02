@@ -11,8 +11,8 @@ export const createAssessmentSchema = z.object({
   termId: z.string().trim().min(1),
   componentId: z.string().trim().min(1),
   name: z.string().trim().min(1),
-  maxScore: z.coerce.number().positive(),
-  weight: z.coerce.number().positive(),
+  maxScore: z.coerce.number().positive().max(999.99).multipleOf(0.01),
+  weight: z.coerce.number().positive().max(9.9999).multipleOf(0.0001),
   date: z.coerce.date(),
 });
 

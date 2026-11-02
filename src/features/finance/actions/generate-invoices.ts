@@ -8,10 +8,13 @@ import {
   type GenerateInvoicesInput,
   type GenerateInvoicesResult,
 } from "@/features/finance/domain/invoice-schema";
-import { suggestInvoiceReference } from "@/features/finance/domain/invoice-reference";
+import { withTransactionRetry } from "@/lib/db/transaction-retry";
+import { invoiceDueDate } from "@/features/finance/domain/invoice-due-date";
+import { allocateInvoiceReference } from "@/lib/db/invoice-reference";
+import { invoiceGenerationKey } from "@/features/finance/data/financial-keys";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { sum } from "@/features/shared/domain/numeric";
 import { getPathname } from "@/i18n/navigation";
@@ -38,15 +41,9 @@ export async function generateInvoices(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "finance", "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -102,25 +99,14 @@ export async function generateInvoices(
   }
 
   const dueDay = Math.min(...items.map((item) => item.dueDayOfMonth ?? DEFAULT_DUE_DAY));
-  const dueDate = new Date(Date.UTC(data.periodYear, (periodMonth ?? 1) - 1, dueDay));
-
-  let existingCount = await db.invoice.count({
-    where: { schoolId, periodYear: data.periodYear, periodMonth },
-  });
+  const dueDate = invoiceDueDate(data.periodYear, periodMonth, dueDay);
 
   let created = 0;
   let skipped = 0;
 
   for (const enrollment of enrollments) {
-    const alreadyInvoiced = await db.invoice.findFirst({
-      where: {
-        enrollmentId: enrollment.id,
-        periodYear: data.periodYear,
-        periodMonth,
-        lines: { some: { feeItem: { feeScheduleId: feeSchedule.id } } },
-      },
-      select: { id: true },
-    });
+    const generationKey = invoiceGenerationKey(schoolId, feeSchedule.id, enrollment.id, data.periodYear, periodMonth);
+    const alreadyInvoiced = await db.invoice.findUnique({ where: { generationKey }, select: { id: true } });
 
     if (alreadyInvoiced) {
       skipped += 1;
@@ -130,43 +116,50 @@ export async function generateInvoices(
     // Soma exacta (decimal.js), nunca `number` — ver shared/domain/numeric.ts.
     const totalAmount = sum(items.map((item) => item.amount));
 
-    await db.$transaction(async (tx) => {
-      const invoice = await tx.invoice.create({
-        data: {
-          schoolId,
-          enrollmentId: enrollment.id,
-          reference: suggestInvoiceReference(data.periodYear, periodMonth, existingCount),
-          periodYear: data.periodYear,
-          periodMonth,
-          dueDate,
-          subtotal: totalAmount.toFixed(2),
-          total: totalAmount.toFixed(2),
-          lines: {
-            create: items.map((item) => ({
-              feeItemId: item.id,
-              description: item.name,
-              quantity: 1,
-              unitAmount: item.amount,
-              amount: item.amount,
-            })),
+    const reference = await allocateInvoiceReference(schoolId, data.periodYear, periodMonth);
+    try {
+      await withTransactionRetry(() => db.$transaction(async (tx) => {
+        const invoice = await tx.invoice.create({
+          data: {
+            schoolId,
+            enrollmentId: enrollment.id,
+            reference,
+            generationKey,
+            periodYear: data.periodYear,
+            periodMonth,
+            dueDate,
+            subtotal: totalAmount.toFixed(2),
+            total: totalAmount.toFixed(2),
+            lines: {
+              create: items.map((item) => ({
+                feeItemId: item.id,
+                description: item.name,
+                quantity: 1,
+                unitAmount: item.amount,
+                amount: item.amount,
+              })),
+            },
           },
-        },
-      });
+        });
 
-      await tx.auditLog.create({
-        data: {
-          schoolId,
-          actorUserId: session.user.id,
-          action: "invoice.generate",
-          entity: "Invoice",
-          entityId: invoice.id,
-          after: JSON.parse(JSON.stringify(invoice)),
-        },
-      });
-    });
-
-    existingCount += 1;
-    created += 1;
+        await tx.auditLog.create({
+          data: {
+            schoolId,
+            actorUserId: session.user.id,
+            action: "invoice.generate",
+            entity: "Invoice",
+            entityId: invoice.id,
+            after: JSON.parse(JSON.stringify(invoice)),
+          },
+        });
+      }));
+      created += 1;
+    } catch (error) {
+      // The unique business key arbitrates concurrent generators; failed rows roll back.
+      const existing = await db.invoice.findUnique({ where: { generationKey }, select: { id: true } });
+      if (!existing) throw error;
+      skipped += 1;
+    }
   }
 
   for (const locale of routing.locales) {

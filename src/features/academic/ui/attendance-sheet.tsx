@@ -40,6 +40,7 @@ interface AttendanceSheetProps {
    * recusaria de qualquer forma, mas esconder a edição evita um envio que falha calado.
    */
   readonly readOnly?: boolean;
+  readonly canReopen?: boolean;
 }
 
 /**
@@ -53,7 +54,12 @@ interface AttendanceSheetProps {
  * submeter explícito, que é exactamente o que esta folha precisa. Alternar aqui não chama
  * o servidor; só `handleSubmit` chama.
  */
-export function AttendanceSheet({
+export function AttendanceSheet(props: AttendanceSheetProps) {
+  // Server refreshes keep drafts only while the authoritative snapshot is unchanged.
+  return <AttendanceSheetBody key={JSON.stringify(props)} {...props} />;
+}
+
+function AttendanceSheetBody({
   scheduleEntryId,
   date,
   teachingGroupName,
@@ -62,8 +68,10 @@ export function AttendanceSheet({
   sessionStatus,
   initialEntries,
   readOnly = false,
+  canReopen = !readOnly,
 }: AttendanceSheetProps) {
   const t = useTranslations("attendance");
+  const tForm = useTranslations("form");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -86,25 +94,27 @@ export function AttendanceSheet({
     setError(null);
 
     startTransition(async () => {
-      const changes = entries
-        .filter((entry) => {
-          const original = initialEntries.find((e) => e.enrollmentId === entry.enrollmentId);
-          return original?.status !== entry.status;
-        })
-        .map((entry) => ({ enrollmentId: entry.enrollmentId, status: entry.status }));
+      try {
+        const changes = entries
+          .filter((entry) => {
+            const original = initialEntries.find((e) => e.enrollmentId === entry.enrollmentId);
+            return original?.status !== entry.status;
+          })
+          .map((entry) => ({ enrollmentId: entry.enrollmentId, status: entry.status }));
 
-      const result = await submitAttendance({
-        scheduleEntryId,
-        date: new Date(`${date}T00:00:00.000Z`),
-        changes,
-      });
+        const result = await submitAttendance({
+          scheduleEntryId,
+          date: new Date(`${date}T00:00:00.000Z`),
+          changes,
+        });
 
-      if (result.status === "error") {
-        setError(result.message);
-        return;
-      }
+        if (result.status === "error") {
+          setError(result.message);
+          return;
+        }
 
-      router.refresh();
+        router.refresh();
+      } catch { setError(tForm("genericError")); router.refresh(); }
     });
   }
 
@@ -113,14 +123,16 @@ export function AttendanceSheet({
     setError(null);
 
     startTransition(async () => {
-      const result = await reopenAttendance(sessionId);
+      try {
+        const result = await reopenAttendance(sessionId);
 
-      if (result.status === "error") {
-        setError(result.message);
-        return;
-      }
+        if (result.status === "error") {
+          setError(result.message);
+          return;
+        }
 
-      router.refresh();
+        router.refresh();
+      } catch { setError(tForm("genericError")); router.refresh(); }
     });
   }
 
@@ -137,12 +149,13 @@ export function AttendanceSheet({
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
           {t("headTeacherReadOnlyNotice")}
         </p>
-      ) : sessionStatus === "SUBMITTED" ? (
+      ) : null}
+      {sessionStatus === "SUBMITTED" ? (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
           {t("submittedNotice")}{" "}
-          <Button type="button" variant="link" onClick={handleReopen} disabled={isPending}>
+          {canReopen ? <Button type="button" variant="link" onClick={handleReopen} disabled={isPending}>
             {t("reopen")}
-          </Button>
+          </Button> : null}
         </p>
       ) : null}
 

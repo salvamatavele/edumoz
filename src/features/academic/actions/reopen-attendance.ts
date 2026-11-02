@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 
+import { AttendanceMutationError } from "@/features/academic/data/attendance-mutations";
+import { withTransactionRetry } from "@/lib/db/transaction-retry";
 import { findTeacherByUserId } from "@/features/academic/data/attendance";
 import type { AttendanceActionResult } from "@/features/academic/domain/attendance-schema";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -33,7 +35,7 @@ export async function reopenAttendance(sessionId: string): Promise<AttendanceAct
     return { status: "error", message: t("attendance.errors.forbidden") };
   }
 
-  if (!sessionId.trim()) {
+  if (typeof sessionId !== "string" || !sessionId.trim()) {
     return { status: "error", message: t("attendance.errors.invalid") };
   }
 
@@ -42,20 +44,14 @@ export async function reopenAttendance(sessionId: string): Promise<AttendanceAct
 
   const attendanceSession = await db.attendanceSession.findUnique({
     where: { id: sessionId },
-    select: { id: true, teachingGroupId: true, timeSlotId: true, status: true },
+    select: { id: true, teachingGroupId: true, scheduleEntryId: true, timeSlotId: true, status: true },
   });
 
   if (!attendanceSession) {
     return { status: "error", message: t("attendance.errors.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
   const teacher = await findTeacherByUserId(schoolId, session.user.id);
   // Sem `timeSlotId` não há forma de identificar de forma determinística qual professor é
@@ -63,6 +59,7 @@ export async function reopenAttendance(sessionId: string): Promise<AttendanceAct
   const owningEntry = attendanceSession.timeSlotId
     ? await db.scheduleEntry.findFirst({
         where: {
+          ...(attendanceSession.scheduleEntryId ? { id: attendanceSession.scheduleEntryId } : {}),
           teachingGroupId: attendanceSession.teachingGroupId,
           timeSlotId: attendanceSession.timeSlotId,
         },
@@ -71,32 +68,36 @@ export async function reopenAttendance(sessionId: string): Promise<AttendanceAct
     : null;
   const isOwner = teacher != null && owningEntry?.teacherId === teacher.id;
 
-  if (!isSchoolAdministrator(context) && !isOwner) {
+  if (!hasPermission(context, "attendance", "edit") && !isOwner) {
     return { status: "error", message: t("attendance.errors.forbidden") };
   }
 
-  await db.$transaction(async (tx) => {
-    const before = await tx.attendanceRecord.findMany({
-      where: { sessionId: attendanceSession.id },
-      select: { enrollmentId: true, status: true, minutesLate: true, note: true },
-    });
+  try {
+    await withTransactionRetry(() => db.$transaction(async (tx) => {
+      const claimed = await tx.attendanceSession.updateMany({
+        where: { id: attendanceSession.id, status: "SUBMITTED" }, data: { status: "DRAFT" },
+      });
+      if (claimed.count !== 1) throw new AttendanceMutationError("alreadyOpen");
+      const before = await tx.attendanceRecord.findMany({
+        where: { sessionId: attendanceSession.id },
+        select: { enrollmentId: true, status: true, minutesLate: true, note: true },
+      });
 
-    await tx.attendanceSession.update({
-      where: { id: attendanceSession.id },
-      data: { status: "DRAFT" },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "attendance.reopen",
-        entity: "AttendanceSession",
-        entityId: attendanceSession.id,
-        before: JSON.parse(JSON.stringify(before)),
-      },
-    });
-  });
+      await tx.auditLog.create({
+        data: {
+          schoolId,
+          actorUserId: session.user.id,
+          action: "attendance.reopen",
+          entity: "AttendanceSession",
+          entityId: attendanceSession.id,
+          before: JSON.parse(JSON.stringify(before)),
+        },
+      });
+    }, { isolationLevel: "ReadCommitted" }));
+  } catch (error) {
+    if (error instanceof AttendanceMutationError) return { status: "error", message: t(`attendance.errors.${error.code}`) };
+    throw error;
+  }
 
   for (const locale of routing.locales) {
     revalidatePath(getPathname({ locale, href: "/attendance" }));

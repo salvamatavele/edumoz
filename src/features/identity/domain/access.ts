@@ -1,3 +1,4 @@
+import { isLegacyUnrestrictedAssociation } from "./functional-permissions";
 import type { PermissionAction, PermissionResource } from "@/features/identity/domain/permission-catalog";
 import { Role } from "@/types";
 
@@ -22,6 +23,7 @@ export interface PermissionGrant {
 
 export interface SessionContext {
   readonly userId: string;
+  readonly authVersion?: number;
   readonly isPlatformAdmin: boolean;
   /** Escola activa. Nula enquanto o utilizador ainda não escolheu, se tiver várias. */
   readonly schoolId: string | null;
@@ -32,8 +34,34 @@ export interface SessionContext {
    * `SCHOOL_MANAGER` sem papel restrito continua com acesso total, exactamente como hoje.
    */
   readonly permissionRoleId?: string | null;
+  /** Explicit restrictions remain restrictive even when their profile list is empty. */
+  readonly permissionsConfigured?: boolean;
   /** Permissões do `permissionRoleId` acima, já carregadas — vazio quando não há papel. */
   readonly permissions?: readonly PermissionGrant[];
+}
+
+/** Preserve effective grants when converting the authenticated session for domain checks. */
+export function toSessionContext(session: {
+  readonly user: { readonly id: string; readonly authVersion?: number };
+  readonly isPlatformAdmin: boolean;
+  readonly schoolId: string | null;
+  readonly role: Role | null;
+  readonly memberships: readonly SchoolMembership[];
+  readonly permissionRoleId?: string | null;
+  readonly permissionsConfigured?: boolean;
+  readonly permissions?: readonly PermissionGrant[];
+}): SessionContext {
+  return {
+    userId: session.user.id,
+    authVersion: session.user.authVersion ?? 0,
+    isPlatformAdmin: session.isPlatformAdmin,
+    schoolId: session.schoolId,
+    role: session.role,
+    memberships: session.memberships,
+    permissionRoleId: session.permissionRoleId ?? null,
+    permissionsConfigured: session.permissionsConfigured ?? Boolean(session.permissionRoleId),
+    permissions: session.permissions ?? [],
+  };
 }
 
 /**
@@ -58,24 +86,27 @@ export function isSchoolAdministrator(context: SessionContext): boolean {
   return context.isPlatformAdmin || context.role === Role.SCHOOL_MANAGER;
 }
 
+/** Coarse gate only; mutation transactions must still reread persisted authority. */
+export function isUnrestrictedSchoolAdministrator(context: SessionContext): boolean {
+  return !!context.userId && !!context.schoolId && (context.isPlatformAdmin || isLegacyUnrestrictedAssociation(context));
+}
+
 /**
- * Permissão configurável, para o que é NOVO a partir daqui — não substitui
- * `isSchoolAdministrator` nem a posse escrita à mão já usadas pelas Server Actions
- * existentes (ver design.md, "Migração sem quebrar").
+ * Effective permission for administrative entry points. Teaching/family ownership is
+ * checked separately; being an administrator never impersonates a teacher or guardian.
  *
- * Só gestores têm papéis configuráveis: sem `permissionRoleId` atribuído, um
- * `SCHOOL_MANAGER` mantém acesso total (comportamento actual). Com um papel atribuído,
- * só as combinações marcadas em `RolePermission` concedem acesso — um papel recém-criado
- * sem nenhuma permissão marcada nega tudo, de propósito (ver design.md, "Risks").
+ * A legacy unrestricted manager retains compatibility. Configured staff associations
+ * need effective grants; teaching/family ownership remains a separate invariant.
  */
 export function hasPermission(
   context: SessionContext,
   resource: PermissionResource,
   action: PermissionAction,
 ): boolean {
+  if (!context.schoolId || !context.userId) return false;
   if (context.isPlatformAdmin) return true;
-  if (context.role !== Role.SCHOOL_MANAGER) return false;
-  if (!context.permissionRoleId) return true;
+  if (isLegacyUnrestrictedAssociation(context)) return true;
+  if (context.role !== Role.SCHOOL_MANAGER && context.role !== Role.TEACHER) return false;
 
   return (context.permissions ?? []).some(
     (grant) => grant.resource === resource && grant.action === action,
@@ -103,18 +134,9 @@ export function hasMembershipIn(context: SessionContext, schoolId: string): bool
 }
 
 /**
- * Escola activa depois de um pedido de troca.
- *
- * Pura de propósito: o `jwt` callback do Auth.js (`src/lib/auth/config.ts`) não pode ser
- * importado em teste sem arrastar `next/server`, que o Vitest não resolve fora do runtime
- * do Next.js. Isolar a validação aqui é o que a torna testável — o callback só chama esta
- * função e atribui o resultado.
- *
- * Um administrador da plataforma pode pedir QUALQUER escola — não está limitado às suas
- * `Membership`s, porque pode não ter nenhuma (ver design.md, "acesso a qualquer escola,
- * sem depender de Membership"). A existência/actividade da escola pedida não se valida
- * aqui: `getTenantDb` já isola por `schoolId`, e uma escola inexistente ou apagada
- * devolveria sempre listas vazias, nunca dados de outra escola.
+ * Resolves a requested switch against freshly loaded memberships and platform status.
+ * The server must still validate that the resulting school exists and is active through
+ * loadEffectiveSessionAccess; this pure choice function does not grant access by itself.
  */
 export function resolveActiveSchool(
   memberships: readonly SchoolMembership[],

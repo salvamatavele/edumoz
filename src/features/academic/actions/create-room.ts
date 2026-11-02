@@ -6,8 +6,8 @@ import { getTranslations } from "next-intl/server";
 import type { FormActionResult } from "@/components/form/field-schema";
 import { createRoomSchema, type CreateRoomInput } from "@/features/academic/domain/academic-structure-schema";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -27,15 +27,9 @@ export async function createRoom(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "academic-structure", "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 

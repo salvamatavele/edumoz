@@ -2,8 +2,8 @@
 
 import { Languages } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
-import { useTransition } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useTransition } from "react";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { LOCALE_LABELS, type Locale, routing } from "@/i18n/routing";
@@ -20,6 +20,18 @@ import { cn } from "@/lib/cn";
  * partir de `/sistema-de-design` leva a `/en/design-system` e não a uma página inexistente.
  */
 export function LocaleSwitcher({ className }: { className?: string }) {
+  return <Suspense fallback={<LocaleLinks className={className} query={{}} />}>
+    <LocaleSwitcherWithQuery className={className} />
+  </Suspense>;
+}
+
+function LocaleSwitcherWithQuery({ className }: { className?: string }) {
+  const searchParams = useSearchParams();
+  const query = Object.fromEntries([...new Set(searchParams.keys())].map((key) => [key, searchParams.getAll(key)]));
+  return <LocaleLinks className={className} query={query} />;
+}
+
+function LocaleLinks({ className, query }: { className?: string; query: Record<string, string[]> }) {
   const active = useLocale() as Locale;
   const pathname = usePathname();
   // Necessário para rotas dinâmicas (ex.: `/presencas/[scheduleEntryId]`) — sem os
@@ -51,7 +63,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
             // caminhos possíveis, e o TypeScript não consegue provar qual se aplica.
             // Suportado em runtime para ambos os casos: `params` fica `{}` numa rota
             // estática, e o next-intl ignora-o.
-            href={{ pathname, params } as never}
+            href={{ pathname, params, query } as never}
             locale={locale}
             hrefLang={locale}
             aria-current={current ? "true" : undefined}

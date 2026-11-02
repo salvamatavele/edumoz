@@ -13,6 +13,8 @@ import type { InvitationStatus, Role } from "@/types";
  */
 
 export interface SignInCandidate {
+  /** Server-authenticated identity from the credentials provider, never a form field. */
+  readonly userId?: string;
   /** E-mail devolvido pelo fornecedor de identidade. */
   readonly email: string | null;
   /**
@@ -28,7 +30,7 @@ export interface SignInCandidate {
 export interface ExistingMembership {
   readonly schoolId: string;
   readonly role: Role;
-  readonly status: "ACTIVE" | "SUSPENDED";
+  readonly status: "ACTIVE" | "SUSPENDED" | "REMOVED";
   /** Domínio de e-mail exigido pela escola, quando definido. */
   readonly allowedEmailDomain: string | null;
 }
@@ -65,7 +67,7 @@ function domainOf(email: string): string {
   return email.slice(email.lastIndexOf("@") + 1).toLowerCase();
 }
 
-function domainAllowed(email: string, allowed: string | null): boolean {
+export function domainAllowed(email: string, allowed: string | null): boolean {
   if (!allowed) return true;
   return domainOf(email) === allowed.replace(/^@/, "").toLowerCase();
 }

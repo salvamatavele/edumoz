@@ -4,11 +4,13 @@ import { DashboardShell, type DashboardNavItem } from "@/components/layout/dashb
 import {
   isFamilyRole,
   isSchoolAdministrator,
-  type SessionContext,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "@/lib/auth/config";
+import { ChangePasswordForm } from "@/features/identity/ui/change-password-form";
 import { Role } from "@/types";
+import { canViewManagementRoute } from "@/features/identity/domain/management-navigation";
 
 /**
  * Casca do painel — aside, cabeçalho utilitário, rodapé mínimo. Ver
@@ -37,13 +39,21 @@ export default async function DashboardLayout({
   const t = await getTranslations();
   const role = session.role;
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
+
+  const managementNavItems: DashboardNavItem[] = [
+      { href: "/students", label: t("nav.students") },
+      { href: "/attendance-report", label: t("nav.attendanceReport") },
+      { href: "/report-cards", label: t("nav.reportCards") },
+      { href: "/academic", label: t("nav.academic") },
+      { href: "/teachers", label: t("nav.teachers") },
+      { href: "/staff", label: t("nav.staff") },
+      { href: "/assessment", label: t("nav.assessment") },
+      { href: "/timetables", label: t("nav.timetables") },
+      { href: "/finance", label: t("nav.finance") },
+      { href: "/users", label: t("nav.users") },
+      { href: "/settings", label: t("nav.settings") },
+    ];
 
   let navItems: DashboardNavItem[];
 
@@ -59,21 +69,17 @@ export default async function DashboardLayout({
       { href: "/report-cards", label: t("nav.reportCards") },
       { href: "/my-timetable", label: t("nav.myTimetable") },
     ];
-  } else if (isSchoolAdministrator(context)) {
-    navItems = [
-      { href: "/students", label: t("nav.students") },
-      { href: "/attendance-report", label: t("nav.attendanceReport") },
-      { href: "/report-cards", label: t("nav.reportCards") },
-      { href: "/academic", label: t("nav.academic") },
-      { href: "/teachers", label: t("nav.teachers") },
-      { href: "/assessment", label: t("nav.assessment") },
-      { href: "/timetables", label: t("nav.timetables") },
-      { href: "/finance", label: t("nav.finance") },
-      { href: "/settings", label: t("nav.settings") },
-    ];
   } else {
     navItems = [];
   }
+
+  if (isSchoolAdministrator(context) || role === Role.TEACHER) {
+    const existing = new Set(navItems.map(item => item.href));
+    navItems.push(...managementNavItems.filter(item => !existing.has(item.href) && canViewManagementRoute(context, item.href)));
+  }
+
+  navItems.push({ href: "/account/password", label: t("nav.password") });
+  if (!session.passwordChangeRequired) navItems.push({ href: "/account/sessions", label: t("nav.sessions") });
 
   const activeMembership = session.memberships.find(
     (membership) => membership.schoolId === session.schoolId,
@@ -81,12 +87,13 @@ export default async function DashboardLayout({
 
   return (
     <DashboardShell
+      schoolAccess={{ schoolId: session.schoolId, isPlatformAdmin: session.isPlatformAdmin, memberships: session.memberships }}
       navItems={navItems}
       userName={session.user.name ?? session.user.email ?? ""}
       schoolName={activeMembership?.schoolName ?? null}
       roleLabel={role ? t(`roles.${role}`) : null}
     >
-      {children}
+      {session.passwordChangeRequired ? <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-10 sm:px-6"><div className="flex flex-col gap-2"><h1 className="text-3xl font-semibold">{t("passwordChange.title")}</h1><p className="text-muted-foreground">{t("passwordChange.initialRequired")}</p></div><ChangePasswordForm /></div> : children}
     </DashboardShell>
   );
 }

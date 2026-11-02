@@ -1,22 +1,20 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 
 import type { FormActionResult } from "@/components/form/field-schema";
 import { SimulatedGateway } from "@/features/finance/data/gateways/simulated-gateway";
-import { recalculateInvoiceBalance } from "@/features/finance/domain/invoice-balance";
+import { FinancialMutationError, withInvoiceTransaction, applyGatewayResult } from "@/features/finance/data/payment-transactions";
+import { paymentIntentKey } from "@/features/finance/data/financial-keys";
 import { MobileMoneyGatewayError } from "@/features/finance/domain/ports/mobile-money-gateway";
 import {
   initiateMobileMoneyPaymentSchema,
   type InitiateMobileMoneyPaymentInput,
 } from "@/features/finance/domain/payment-schema";
-import { resolvePaymentTransition } from "@/features/finance/domain/payment-transition";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { toDecimal } from "@/features/shared/domain/numeric";
 import { getPathname } from "@/i18n/navigation";
@@ -40,15 +38,9 @@ export async function initiateMobileMoneyPayment(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "finance", "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -69,108 +61,35 @@ export async function initiateMobileMoneyPayment(
   const db = getTenantDb(schoolId);
   const data = parsed.data;
 
-  const invoice = await db.invoice.findUnique({
-    where: { id: data.invoiceId },
-    select: {
-      id: true,
-      reference: true,
-      total: true,
-      paidAmount: true,
-      dueDate: true,
-      cancelledAt: true,
-      status: true,
-    },
-  });
-
-  if (!invoice) {
-    return { status: "error", message: t("finance.payments.errors.invoiceNotFound") };
-  }
-
-  if (invoice.status === "CANCELLED") {
-    return { status: "error", message: t("finance.payments.errors.invoiceCancelled") };
-  }
-
-  const outstanding = toDecimal(invoice.total).minus(toDecimal(invoice.paidAmount));
-
-  if (outstanding.lessThanOrEqualTo(0)) {
-    return { status: "error", message: t("finance.payments.errors.nothingOwed") };
-  }
-
-  // Gravado ANTES de contactar o operador — se `gateway.initiate` falhar ou nunca
-  // voltar, este registo já existe e a tentativa não fica em limbo.
-  const payment = await db.payment.create({
-    data: {
-      schoolId,
-      invoiceId: invoice.id,
-      amount: outstanding.toFixed(2),
-      method: "MOBILE_MONEY",
-      provider: data.provider,
-      payerPhone: data.payerPhone,
-      status: "INITIATED",
-      idempotencyKey: randomUUID(),
-      initiatedById: session.user.id,
-    },
-  });
-
-  const gateway = new SimulatedGateway(data.provider);
-
-  let initiation;
-
+  const idempotencyKey = paymentIntentKey(schoolId, "mobile", data.idempotencyKey);
   try {
-    initiation = await gateway.initiate({
-      idempotencyKey: payment.idempotencyKey,
-      amount: outstanding,
-      currency: "MZN",
-      payerPhone: data.payerPhone,
-      reference: invoice.reference,
-      description: t("finance.payments.mobileMoneyDescription", { reference: invoice.reference }),
+    const attempt = await withInvoiceTransaction(schoolId, data.invoiceId, async (tx, invoice) => {
+      const existing = await tx.payment.findUnique({ where: { idempotencyKey } });
+      if (existing && (existing.invoiceId !== invoice.id || existing.provider !== data.provider || existing.payerPhone !== data.payerPhone)) throw new FinancialMutationError("intentConflict");
+      if (existing && (existing.status !== "INITIATED" || existing.providerReference)) return { payment: existing, invoice, resume: false };
+      if (invoice.status === "CANCELLED" || invoice.cancelledAt) throw new FinancialMutationError("invoiceCancelled");
+      if (invoice.currency !== "MZN") throw new FinancialMutationError("unsupportedCurrency");
+      if (existing) return { payment: existing, invoice, resume: true };
+      const pending = await tx.payment.findFirst({ where: { invoiceId: invoice.id, method: "MOBILE_MONEY", status: { in: ["INITIATED", "PENDING"] } }, select: { id: true } });
+      if (pending) throw new FinancialMutationError("paymentInProgress");
+      const outstanding = toDecimal(invoice.total.toString()).minus(toDecimal(invoice.paidAmount.toString()));
+      if (outstanding.lessThanOrEqualTo(0)) throw new FinancialMutationError("nothingOwed");
+      const payment = await tx.payment.create({ data: { schoolId, invoiceId: invoice.id, amount: outstanding.toFixed(2), currency: invoice.currency, method: "MOBILE_MONEY", provider: data.provider, payerPhone: data.payerPhone, status: "INITIATED", idempotencyKey, initiatedById: session.user.id } });
+      await tx.auditLog.create({ data: { schoolId, actorUserId: session.user.id, action: "payment.mobileAttempt", entity: "Payment", entityId: payment.id, after: { status: "INITIATED", amount: payment.amount.toString(), currency: payment.currency, provider: payment.provider } } });
+      return { payment, invoice, resume: true };
     });
-  } catch (error) {
-    if (error instanceof MobileMoneyGatewayError) {
-      return { status: "error", message: t("finance.payments.errors.gatewayFailure") };
+    if (attempt.resume) {
+      // This is outside the transaction. Replays use the original amount and intent key.
+      const gateway = new SimulatedGateway(data.provider);
+      const initiation = await gateway.initiate({ idempotencyKey: attempt.payment.idempotencyKey, amount: toDecimal(attempt.payment.amount), currency: "MZN", payerPhone: data.payerPhone, reference: attempt.invoice.reference, description: t("finance.payments.mobileMoneyDescription", { reference: attempt.invoice.reference }) });
+      await applyGatewayResult(schoolId, attempt.invoice.id, attempt.payment.id, initiation, session.user.id, "payment.initiateMobileMoney");
     }
-
+  } catch (error) {
+    if (error instanceof FinancialMutationError) return { status: "error", message: t(`finance.payments.errors.${error.code}`) };
+    if (error instanceof MobileMoneyGatewayError) return { status: "error", message: t("finance.payments.errors.gatewayFailure") };
+    const existing = await db.payment.findUnique({ where: { idempotencyKey } });
+    if (existing && (existing.invoiceId !== data.invoiceId || existing.provider !== data.provider || existing.payerPhone !== data.payerPhone)) return { status: "error", message: t("finance.payments.errors.intentConflict") };
     throw error;
-  }
-
-  const now = new Date();
-  const transition = resolvePaymentTransition("INITIATED", initiation, now);
-
-  if (transition) {
-    await db.$transaction(async (tx) => {
-      await tx.payment.update({
-        where: { id: payment.id },
-        data: { ...transition, rawPayload: JSON.parse(JSON.stringify(transition.rawPayload ?? null)) },
-      });
-
-      if (transition.status === "CONFIRMED") {
-        const confirmedPayments = await tx.payment.findMany({
-          where: { invoiceId: invoice.id, status: "CONFIRMED" },
-          select: { amount: true },
-        });
-
-        const balance = recalculateInvoiceBalance(
-          invoice.total,
-          confirmedPayments.map((p) => p.amount),
-          invoice.dueDate,
-          now,
-          invoice.cancelledAt,
-        );
-
-        await tx.invoice.update({ where: { id: invoice.id }, data: balance });
-      }
-
-      await tx.auditLog.create({
-        data: {
-          schoolId,
-          actorUserId: session.user.id,
-          action: "payment.initiateMobileMoney",
-          entity: "Payment",
-          entityId: payment.id,
-          after: JSON.parse(JSON.stringify({ ...payment, ...transition })),
-        },
-      });
-    });
   }
 
   for (const locale of routing.locales) {

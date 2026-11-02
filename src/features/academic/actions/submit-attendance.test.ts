@@ -307,4 +307,31 @@ describe("submitAttendance", () => {
     const records = await prisma.attendanceRecord.findMany({ where: { sessionId: session.id } });
     expect(records).toHaveLength(0);
   });
+  it("refuses a direct correction of an already submitted session", async () => {
+    mockAuth.mockResolvedValue(sessionAs(teacherUserId));
+    const before = await prisma.attendanceRecord.findMany({ where: { session: { schoolId, date: MONDAY_DATE } }, orderBy: { id: "asc" } });
+    const auditCount = await prisma.auditLog.count({ where: { schoolId, action: "attendance.submit" } });
+    expect(await submitAttendance({ scheduleEntryId, date: MONDAY_DATE, changes: [{ enrollmentId: enrollmentIds[0], status: "PRESENT" }] })).toEqual({ status: "error", message: "attendance.errors.submitted" });
+    expect(await prisma.attendanceRecord.findMany({ where: { session: { schoolId, date: MONDAY_DATE } }, orderBy: { id: "asc" } })).toEqual(before);
+    expect(await prisma.auditLog.count({ where: { schoolId, action: "attendance.submit" } })).toBe(auditCount);
+  });
+  it("refuses a date outside the schedule weekday or academic year", async () => {
+    mockAuth.mockResolvedValue(sessionAs(teacherUserId));
+    for (const date of [new Date("2026-08-18T00:00:00Z"), new Date("2027-01-04T00:00:00Z")]) {
+      expect(await submitAttendance({ scheduleEntryId, date, changes: [] })).toEqual({ status: "error", message: "attendance.errors.invalid" });
+      expect(await prisma.attendanceSession.count({ where: { schoolId, date } })).toBe(0);
+    }
+  });
+  it("allows only one of two simultaneous initial submissions", async () => {
+    mockAuth.mockResolvedValue(sessionAs(teacherUserId));
+    const date = new Date("2026-08-31T00:00:00Z");
+    const results = await Promise.all([
+      submitAttendance({ scheduleEntryId, date, changes: [{ enrollmentId: enrollmentIds[0], status: "ABSENT" }] }),
+      submitAttendance({ scheduleEntryId, date, changes: [{ enrollmentId: enrollmentIds[0], status: "LATE" }] }),
+    ]);
+    expect(results.filter((result) => result.status === "success")).toHaveLength(1);
+    const row = await prisma.attendanceSession.findFirstOrThrow({ where: { schoolId, date } });
+    expect(await prisma.auditLog.count({ where: { schoolId, entityId: row.id, action: "attendance.submit" } })).toBe(1);
+  });
+
 });

@@ -1,3 +1,4 @@
+import { useState, type ComponentProps } from "react";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -40,6 +41,12 @@ const scheme: SerializedScheme = {
 };
 
 const assessment = { id: "assessment-1", name: "Teste 1", componentCode: "AT", maxScore: "20", weight: "1" };
+
+it("shows closed terms as read-only even for the owning teacher", () => {
+  renderWithIntl(<GradeSheet assessment={assessment} teachingGroupName="10A" subjectName="Matemática" scheme={scheme} initialEntries={[]} termClosed />);
+  expect(screen.getByText(/Trimestre fechado/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
+});
 
 const entries = [
   {
@@ -131,4 +138,32 @@ describe("GradeSheet", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Falhou");
     expect(refresh).not.toHaveBeenCalled();
   });
+});
+
+
+it("reloads changed saved grades but preserves drafts on an identical refresh", async () => {
+  function RefreshingSheet() {
+    const [snapshot, setSnapshot] = useState<ComponentProps<typeof GradeSheet>["initialEntries"]>(entries);
+    return <>
+      <button onClick={() => setSnapshot([...entries])}>Identical snapshot</button>
+      <button onClick={() => setSnapshot(entries.map((entry, index) => index === 0 ? { ...entry, score: "18" } : entry))}>Changed snapshot</button>
+      <GradeSheet assessment={assessment} teachingGroupName="10A" subjectName="Matemática" scheme={scheme} initialEntries={snapshot} />
+    </>;
+  }
+  renderWithIntl(<RefreshingSheet />);
+  const input = () => screen.getByRole("spinbutton", { name: /Ana Matsinhe/ });
+  await userEvent.type(input(), "14");
+  await userEvent.click(screen.getByRole("button", { name: "Identical snapshot" }));
+  expect(input()).toHaveValue(14);
+  await userEvent.click(screen.getByRole("button", { name: "Changed snapshot" }));
+  expect(input()).toHaveValue(18);
+});
+
+it("retains the grade draft and shows a generic transport error", async () => {
+  mockRecordGrades.mockRejectedValueOnce(Error("Private transport failure"));
+  setup();
+  await userEvent.type(screen.getByRole("spinbutton", { name: /Ana Matsinhe/ }), "14");
+  await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível guardar");
+  expect(screen.getByRole("spinbutton", { name: /Ana Matsinhe/ })).toHaveValue(14);
 });

@@ -1,10 +1,10 @@
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { listTeachers, listTeachingGroups, listTeachingStaffOptions } from "@/features/academic/data/teaching-staff";
 import { TeachingStaffPanel } from "@/features/academic/ui/settings/teaching-staff-panel";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
-import { redirect } from "@/i18n/navigation";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -36,16 +36,10 @@ export default async function TeachersPage({ params }: PageProps<"/[locale]/teac
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  if (!hasPermission(context, "teaching-staff", "view")) {
+    return <AccessDenied message={tCommon("forbidden")} />;
   }
 
   const { schoolId } = session;
@@ -63,7 +57,7 @@ export default async function TeachersPage({ params }: PageProps<"/[locale]/teac
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <TeachingStaffPanel teachers={teachers} teachingGroups={teachingGroups} options={options} />
+      <TeachingStaffPanel canCreate={hasPermission(context, "teaching-staff", "create")} teachers={teachers} teachingGroups={teachingGroups} options={options} />
     </div>
   );
 }

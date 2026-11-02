@@ -1,3 +1,4 @@
+import { invoicePeriodSchema } from "@/features/finance/domain/invoice-schema";
 import { sum, toDecimal } from "@/features/shared/domain/numeric";
 import { getTenantDb } from "@/lib/db/tenant";
 import type { InvoiceStatus, PaymentStatus } from "@/types";
@@ -130,6 +131,7 @@ export async function getDebtReport(
   periodYear: number,
   periodMonth: number | null,
 ): Promise<DebtReportRow[]> {
+  if (!invoicePeriodSchema.safeParse({ periodYear, periodMonth }).success) return [];
   const db = getTenantDb(schoolId);
 
   const invoices = await db.invoice.findMany({

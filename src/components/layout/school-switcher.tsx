@@ -19,34 +19,33 @@ import { listSchoolsForSwitcher } from "@/features/identity/actions/list-schools
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
+export interface SchoolSwitcherAccess {
+  readonly schoolId: string | null;
+  readonly isPlatformAdmin: boolean;
+  readonly memberships: readonly { readonly schoolId: string; readonly schoolName: string }[];
+}
+
 interface SwitcherOption {
   readonly schoolId: string;
   readonly schoolName: string;
 }
 
 /**
- * Selector de escola.
- *
- * Para a generalidade dos utilizadores, só aparece com mais do que uma `Membership` — um
- * selector com uma única opção é ruído. Trocar de escola chama `update({ schoolId })`, que
- * reemite o JWT com o papel da escola nova (o callback `jwt` em `src/lib/auth/config.ts`
- * valida o pedido contra as `Membership` do próprio token); o `router.refresh()` a seguir é
- * o que faz os Server Components que já leram a sessão (ex.: `/alunos`) resolverem a
- * escola nova sem um recarregamento completo da página.
- *
- * Um administrador da plataforma não depende de `Membership` nenhuma — por isso vê aqui
- * TODAS as escolas activas (`listSchoolsForSwitcher`), sempre, mesmo com zero ou uma só.
- * Sem isto, um superadmin sem `Membership` não teria forma nenhuma de escolher uma escola
- * para gerir, apesar de `resolveActiveSchool` já aceitar o pedido.
+ * Selects an authorized school using memberships reloaded by the server on every request.
+ * A single option remains available when no school is selected, allowing recovery after
+ * revocation without silently selecting a different school. Platform administrators
+ * receive all active schools through the separately authorized server action.
  */
-export function SchoolSwitcher({ className }: { className?: string }) {
+export function SchoolSwitcher({ className, access }: { className?: string; access?: SchoolSwitcherAccess }) {
   const { data: session, update } = useSession();
   const t = useTranslations("auth");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [platformSchools, setPlatformSchools] = useState<SwitcherOption[] | null>(null);
 
-  const isPlatformAdmin = session?.isPlatformAdmin ?? false;
+  // Server refreshes must override a stale useSession cache after membership revocation.
+  const currentAccess = access ?? session;
+  const isPlatformAdmin = currentAccess?.isPlatformAdmin ?? false;
 
   useEffect(() => {
     // Nada a subscrever para quem não é superadmin — `platformSchools` só é lido mais
@@ -67,15 +66,16 @@ export function SchoolSwitcher({ className }: { className?: string }) {
     };
   }, [isPlatformAdmin]);
 
-  const options: SwitcherOption[] = isPlatformAdmin ? (platformSchools ?? []) : (session?.memberships ?? []);
+  const available: readonly SwitcherOption[] = isPlatformAdmin ? (platformSchools ?? []) : (currentAccess?.memberships ?? []);
+  const options = [...new Map(available.map((option) => [option.schoolId, option])).values()];
 
-  if (!isPlatformAdmin && options.length <= 1) return null;
+  const active = options.find((option) => option.schoolId === currentAccess?.schoolId);
+  // Keep a recovery path when access to the previously selected school is revoked.
+  if (!isPlatformAdmin && (options.length === 0 || (options.length === 1 && active))) return null;
   if (isPlatformAdmin && platformSchools === null) return null;
 
-  const active = options.find((option) => option.schoolId === session?.schoolId);
-
   function handleChange(schoolId: string) {
-    if (!schoolId || schoolId === session?.schoolId) return;
+    if (!schoolId || schoolId === currentAccess?.schoolId) return;
 
     startTransition(async () => {
       await update({ schoolId });
@@ -101,7 +101,7 @@ export function SchoolSwitcher({ className }: { className?: string }) {
         <DropdownMenuLabel>{t("changeSchool")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup
-          value={session?.schoolId ?? ""}
+          value={currentAccess?.schoolId ?? ""}
           onValueChange={handleChange}
         >
           {options.map((option) => (

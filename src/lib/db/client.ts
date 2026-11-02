@@ -1,6 +1,7 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 import { PrismaClient } from "@/generated/prisma/client";
+import { assertTestDatabaseUrl } from "@/test/database-safety";
 
 /**
  * Cliente Prisma cru — SEM filtro de escola.
@@ -11,6 +12,13 @@ import { PrismaClient } from "@/generated/prisma/client";
  */
 function createPrismaClient() {
   const url = process.env.DATABASE_URL;
+
+  if (process.env.NODE_ENV === "test") {
+    assertTestDatabaseUrl(process.env.TEST_DATABASE_URL);
+    if (url !== process.env.TEST_DATABASE_URL) {
+      throw new Error("Test Prisma clients must use TEST_DATABASE_URL.");
+    }
+  }
 
   if (!url) {
     throw new Error(

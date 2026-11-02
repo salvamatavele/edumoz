@@ -6,3 +6,7 @@ allowBuilds:
   prisma: true
   sharp: false
   unrs-resolver: false
+
+# Patch the URI parser used by Prisma tooling without changing its major API.
+overrides:
+  fast-uri: 3.1.9

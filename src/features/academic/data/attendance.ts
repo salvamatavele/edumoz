@@ -33,7 +33,7 @@ export function todayInMaputo(): Date {
 export async function findTeacherByUserId(schoolId: string, userId: string) {
   const db = getTenantDb(schoolId);
   return db.teacher.findFirst({
-    where: { userId },
+    where: { userId, isActive: true },
     select: { id: true, firstName: true, lastName: true },
   });
 }
@@ -91,14 +91,15 @@ export async function listTeacherScheduleForDate(
   teacherId: string,
   date: Date,
 ): Promise<TeacherScheduleEntry[]> {
+  if (!Number.isFinite(date.getTime())) return [];
   const db = getTenantDb(schoolId);
 
   const academicYear = await db.academicYear.findFirst({
     where: { isActive: true },
-    select: { id: true },
+    select: { id: true, startDate: true, endDate: true },
   });
 
-  if (!academicYear) return [];
+  if (!academicYear || date < academicYear.startDate || date > academicYear.endDate) return [];
 
   const dayOfWeek = todaysDayOfWeek(date);
   const directedClassGroupIds = await listHeadTeacherClassGroupIds(schoolId, teacherId);
@@ -188,11 +189,14 @@ export async function getAttendanceRoster(
   date: Date,
   viewerTeacherId: string | null = null,
 ): Promise<AttendanceRoster | null> {
+  if (!Number.isFinite(date.getTime())) return null;
   const db = getTenantDb(schoolId);
 
   const scheduleEntry = await db.scheduleEntry.findUnique({
     where: { id: scheduleEntryId },
     select: {
+      academicYear: { select: { isActive: true, startDate: true, endDate: true } },
+      timeSlot: { select: { dayOfWeek: true } },
       teacherId: true,
       teachingGroupId: true,
       timeSlotId: true,
@@ -200,9 +204,11 @@ export async function getAttendanceRoster(
     },
   });
 
-  if (!scheduleEntry) return null;
+  if (!scheduleEntry || !scheduleEntry.academicYear.isActive ||
+      date < scheduleEntry.academicYear.startDate || date > scheduleEntry.academicYear.endDate ||
+      scheduleEntry.timeSlot.dayOfWeek !== todaysDayOfWeek(date)) return null;
 
-  let isOwn = true;
+  let isOwn = false;
 
   if (viewerTeacherId !== null) {
     isOwn = scheduleEntry.teacherId === viewerTeacherId;

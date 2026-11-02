@@ -1,8 +1,8 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useId, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useId, useRef, useState, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ import { PaymentProvider, type InvoiceStatus, type PaymentStatus } from "@/types
 type ProviderValue = (typeof PaymentProvider)[keyof typeof PaymentProvider];
 
 interface PaymentManagerProps {
+  readonly canCreate?: boolean;
+  readonly canEdit?: boolean;
   readonly invoice: InvoiceForPayment;
 }
 
@@ -58,14 +60,19 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-export function PaymentManager({ invoice }: PaymentManagerProps) {
+export function PaymentManager({ invoice, canCreate = true, canEdit = true }: PaymentManagerProps) {
   const t = useTranslations("finance");
+  const locale = useLocale();
+  const currency = invoice.currency === "MZN" && locale === "pt" ? "MT" : invoice.currency;
   const tForm = useTranslations("form");
   const router = useRouter();
   const formId = useId();
+  const manualIntent = useRef<string | null>(null);
+  const mobileIntent = useRef<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmationError, setConfirmationError] = useState<string | null>(null);
 
   const [manualAmount, setManualAmount] = useState("");
   const [manualMethod, setManualMethod] = useState<(typeof MANUAL_METHODS)[number]>("CASH");
@@ -85,22 +92,30 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
     event.preventDefault();
     setManualError(null);
     setManualMessage(null);
+    const idempotencyKey = manualIntent.current ??= crypto.randomUUID();
 
     startTransition(async () => {
-      const result = await recordManualPayment({
-        invoiceId: invoice.id,
-        amount: Number(manualAmount),
-        method: manualMethod,
-      });
+      try {
+        const result = await recordManualPayment({
+          invoiceId: invoice.id,
+          amount: Number(manualAmount),
+          idempotencyKey,
+          method: manualMethod,
+        });
 
-      if (result.status === "error") {
-        setManualError(result.message ?? tForm("genericError"));
-        return;
+        if (result.status === "error") {
+          setManualError(result.message ?? tForm("genericError"));
+          return;
+        }
+
+        manualIntent.current = null;
+        setManualAmount("");
+        setManualMessage(t("payments.manualSuccess"));
+        router.refresh();
+      } catch {
+        setManualError(t("payments.errors.retrySameIntent"));
+        router.refresh();
       }
-
-      setManualAmount("");
-      setManualMessage(t("payments.manualSuccess"));
-      router.refresh();
     });
   }
 
@@ -108,32 +123,42 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
     event.preventDefault();
     setMobileError(null);
     setMobileMessage(null);
+    const idempotencyKey = mobileIntent.current ??= crypto.randomUUID();
 
     startTransition(async () => {
-      const result = await initiateMobileMoneyPayment({
-        invoiceId: invoice.id,
-        provider,
-        payerPhone,
-      });
+      try {
+        const result = await initiateMobileMoneyPayment({
+          invoiceId: invoice.id,
+          provider,
+          payerPhone,
+          idempotencyKey,
+        });
 
-      if (result.status === "error") {
-        setMobileError(result.message ?? tForm("genericError"));
-        return;
+        if (result.status === "error") {
+          setMobileError(result.message ?? tForm("genericError"));
+          return;
+        }
+
+        mobileIntent.current = null;
+        setPayerPhone("");
+        setMobileMessage(t("payments.mobileMoneySuccess"));
+        router.refresh();
+      } catch {
+        setMobileError(t("payments.errors.retrySameIntent"));
+        router.refresh();
       }
-
-      setPayerPhone("");
-      setMobileMessage(t("payments.mobileMoneySuccess"));
-      router.refresh();
     });
   }
 
   function handleConfirm(paymentId: string) {
     setConfirmingId(paymentId);
-
+    setConfirmationError(null);
     startTransition(async () => {
-      await confirmPayment({ paymentId });
-      setConfirmingId(null);
-      router.refresh();
+      try {
+        const result = await confirmPayment({ paymentId });
+        if (result.status === "error") setConfirmationError(result.message ?? tForm("genericError"));
+      } catch { setConfirmationError(t("payments.errors.retrySameIntent")); }
+      finally { setConfirmingId(null); router.refresh(); }
     });
   }
 
@@ -142,16 +167,18 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
     setReverseError(null);
 
     startTransition(async () => {
-      const result = await reversePayment({ paymentId: reversingPayment.id, reason });
+      try {
+        const result = await reversePayment({ paymentId: reversingPayment.id, reason });
 
-      if (result.status === "error") {
-        setReverseError(result.message ?? tForm("genericError"));
-        return;
-      }
+        if (result.status === "error") {
+          setReverseError(result.message ?? tForm("genericError"));
+          return;
+        }
 
-      setReversingPayment(null);
-      setReason("");
-      router.refresh();
+        setReversingPayment(null);
+        setReason("");
+        router.refresh();
+      } catch { setReverseError(tForm("genericError")); router.refresh(); }
     });
   }
 
@@ -166,14 +193,14 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
           <div className="flex items-center gap-3">
             <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>{t(`invoiceStatus.${invoice.status}`)}</Badge>
             <p className="text-sm text-muted-foreground">
-              {t("invoicing.debtReport.total")}: <span className="font-semibold text-foreground">{invoice.total}</span>
+              {t("invoicing.debtReport.total")}: <span className="font-semibold text-foreground">{invoice.total} {currency}</span>
               {" · "}
-              {t("invoicing.debtReport.paidAmount")}: <span className="font-semibold text-foreground">{invoice.paidAmount}</span>
+              {t("invoicing.debtReport.paidAmount")}: <span className="font-semibold text-foreground">{invoice.paidAmount} {currency}</span>
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
+        {canCreate ? <div className="grid gap-6 sm:grid-cols-2">
           <form onSubmit={handleManualSubmit} className="flex flex-col gap-3 rounded-md border border-border p-4">
             <h4 className="font-medium">{t("payments.manualTitle")}</h4>
 
@@ -185,7 +212,7 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
             ) : null}
 
             <Input
-              label={t("payments.fields.amount")}
+              label={t("payments.fields.amount", { currency })}
               type="number"
               min={0.01}
               step="0.01"
@@ -256,11 +283,12 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
               {isPending ? tForm("saving") : t("payments.mobileMoneyTrigger")}
             </Button>
           </form>
-        </div>
+        </div> : null}
       </section>
 
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-6">
         <h4 className="font-medium">{t("payments.tableTitle")}</h4>
+        {confirmationError ? <ErrorBanner message={confirmationError} /> : null}
 
         {invoice.payments.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("payments.empty")}</p>
@@ -290,7 +318,7 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
                     <td className="px-4 py-3">{new Date(payment.createdAt).toLocaleDateString("pt-MZ")}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        {payment.status === "INITIATED" || payment.status === "PENDING" ? (
+                        {canEdit && (payment.status === "INITIATED" || payment.status === "PENDING") ? (
                           <Button
                             type="button"
                             size="sm"
@@ -302,7 +330,7 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
                           </Button>
                         ) : null}
 
-                        {payment.status === "CONFIRMED" ? (
+                        {canEdit && payment.status === "CONFIRMED" ? (
                           <Button
                             type="button"
                             size="sm"
@@ -331,7 +359,7 @@ export function PaymentManager({ invoice }: PaymentManagerProps) {
         )}
       </section>
 
-      <Dialog open={reversingPayment !== null} onOpenChange={(open) => !open && setReversingPayment(null)}>
+      <Dialog open={reversingPayment !== null && invoice.payments.some((payment) => payment.id === reversingPayment.id && payment.status === "CONFIRMED")} onOpenChange={(open) => !open && setReversingPayment(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("payments.reverseDialog.title")}</DialogTitle>

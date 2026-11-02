@@ -7,7 +7,7 @@ import {
   listAttendanceReportFilters,
 } from "@/features/academic/data/attendance";
 import { auth } from "@/lib/auth/config";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 
 export async function generateMetadata({
   params,
@@ -38,15 +38,9 @@ export default async function AttendanceReportPage({
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "attendance", "view")) {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
         <p className="rounded-lg border border-border bg-surface p-6 text-muted-foreground">

@@ -1,4 +1,5 @@
 import type { Role } from "@/generated/prisma/enums";
+import type { PermissionGrant } from "@/features/identity/domain/access";
 
 /**
  * Extensões à sessão do Auth.js.
@@ -13,9 +14,15 @@ interface SessionMembership {
 }
 
 declare module "next-auth" {
+  interface User {
+    authVersion?: number;
+  }
   interface Session {
+    passwordChangeRequired?: boolean;
     user: {
       id: string;
+      authVersion?: number;
+      authSessionId?: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -27,10 +34,12 @@ declare module "next-auth" {
     memberships: SessionMembership[];
     /**
      * Superadmin da plataforma — acesso total, a qualquer escola, sem depender de
-     * `Membership`. Lido uma vez no login (`User.isPlatformAdmin`); não muda ao trocar
-     * de escola, ao contrário de `role`.
+     * `Membership`. Reloaded from persisted state on every authenticated request.
      */
     isPlatformAdmin: boolean;
+    permissionRoleId?: string | null;
+    permissionsConfigured?: boolean;
+    permissions?: readonly PermissionGrant[];
   }
 }
 

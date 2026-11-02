@@ -4,15 +4,15 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 
 import type { FormActionResult } from "@/components/form/field-schema";
-import { recalculateInvoiceBalance } from "@/features/finance/domain/invoice-balance";
+import { FinancialMutationError, withInvoiceTransaction, refreshInvoiceBalance } from "@/features/finance/data/payment-transactions";
 import {
   reversePaymentSchema,
   type ReversePaymentInput,
 } from "@/features/finance/domain/payment-schema";
 import { canTransition } from "@/features/finance/domain/payment-state";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -35,15 +35,9 @@ export async function reversePayment(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "finance", "edit")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -77,44 +71,20 @@ export async function reversePayment(
     return { status: "error", message: t("finance.payments.errors.paymentNotFound") };
   }
 
-  if (!canTransition(payment.status, "REVERSED")) {
-    return { status: "error", message: t("finance.payments.errors.cannotReverse") };
+  try {
+    await withInvoiceTransaction(schoolId, payment.invoice.id, async (tx, invoice) => {
+      const current = await tx.payment.findFirst({ where: { id: payment.id, invoiceId: invoice.id }, select: { status: true, amount: true } });
+      if (!current) throw new FinancialMutationError("paymentNotFound");
+      if (!canTransition(current.status, "REVERSED")) throw new FinancialMutationError("cannotReverse");
+      const now = new Date();
+      await tx.payment.update({ where: { id: payment.id }, data: { status: "REVERSED", reversedAt: now } });
+      await refreshInvoiceBalance(tx, invoice, now);
+      await tx.auditLog.create({ data: { schoolId, actorUserId: session.user.id, action: "payment.reverse", entity: "Payment", entityId: payment.id, before: { status: current.status }, after: JSON.parse(JSON.stringify({ status: "REVERSED", amount: current.amount.toString(), reversedAt: now, reason: data.reason })) } });
+    });
+  } catch (error) {
+    if (error instanceof FinancialMutationError) return { status: "error", message: t(`finance.payments.errors.${error.code}`) };
+    throw error;
   }
-
-  const now = new Date();
-
-  await db.$transaction(async (tx) => {
-    const reversed = await tx.payment.update({
-      where: { id: payment.id },
-      data: { status: "REVERSED", reversedAt: now },
-    });
-
-    const confirmedPayments = await tx.payment.findMany({
-      where: { invoiceId: payment.invoice.id, status: "CONFIRMED" },
-      select: { amount: true },
-    });
-
-    const balance = recalculateInvoiceBalance(
-      payment.invoice.total,
-      confirmedPayments.map((p) => p.amount),
-      payment.invoice.dueDate,
-      now,
-      payment.invoice.cancelledAt,
-    );
-
-    await tx.invoice.update({ where: { id: payment.invoice.id }, data: balance });
-
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "payment.reverse",
-        entity: "Payment",
-        entityId: payment.id,
-        after: JSON.parse(JSON.stringify({ ...reversed, reason: data.reason })),
-      },
-    });
-  });
 
   for (const locale of routing.locales) {
     revalidatePath(getPathname({ locale, href: "/finance" }));

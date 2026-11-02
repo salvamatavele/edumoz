@@ -2,9 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, TriangleAlert, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useId, useMemo, useState, useTransition } from "react";
-import { type Resolver, useFieldArray, useForm } from "react-hook-form";
+import { type Resolver, useFieldArray, useForm, useWatch } from "react-hook-form";
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { validationMessages } from "@/components/form/validation-messages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +30,7 @@ import {
 import { AssessmentRegime, ComponentType, RoundingMode } from "@/types";
 
 interface AssessmentSchemeSectionProps {
+  readonly canCreate?: boolean;
   readonly rows: readonly AssessmentSchemeRow[];
   readonly academicYear: string | null;
   readonly options: AssessmentSchemeOptions;
@@ -58,7 +60,7 @@ const DEFAULT_VALUES: CreateAssessmentSchemeInput = {
  * Server Action, mas com o seu próprio formulário: `useFieldArray` para os componentes,
  * que `FieldDefinition` (`components/form/field-schema.ts`) não descreve.
  */
-export function AssessmentSchemeSection({ rows, academicYear, options }: AssessmentSchemeSectionProps) {
+export function AssessmentSchemeSection({ rows, academicYear, options, canCreate = true }: AssessmentSchemeSectionProps) {
   const t = useTranslations("assessmentSchemes");
   const tCommon = useTranslations("common");
   const tAcademic = useTranslations("academic");
@@ -108,12 +110,12 @@ export function AssessmentSchemeSection({ rows, academicYear, options }: Assessm
       <div className="flex flex-wrap items-center justify-end gap-4">
         {missingDependencyReason ? (
           <p className="text-sm text-muted-foreground">{missingDependencyReason}</p>
-        ) : (
+        ) : canCreate ? (
           <Button size="sm" onClick={() => setOpen(true)}>
             <Plus aria-hidden="true" strokeWidth={1.75} />
             {t("create.trigger")}
           </Button>
-        )}
+        ) : null}
       </div>
 
       <DataTable
@@ -144,6 +146,7 @@ function AssessmentSchemeForm({
 }) {
   const t = useTranslations("assessmentSchemes");
   const tForm = useTranslations("form");
+  const locale = useLocale();
   const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -152,13 +155,15 @@ function AssessmentSchemeForm({
     // Mesmo desajuste que `FormModal` já trata: `z.coerce.number()` faz a entrada e a
     // saída do esquema divergirem (`unknown` vs `number`), e o `zodResolver` é tipado
     // para a entrada. O contrato real está garantido por `CreateAssessmentSchemeInput`.
-    resolver: zodResolver(createAssessmentSchemeSchema) as Resolver<CreateAssessmentSchemeInput>,
+    resolver: zodResolver(createAssessmentSchemeSchema, { error: validationMessages(locale) }) as Resolver<CreateAssessmentSchemeInput>,
     defaultValues: DEFAULT_VALUES,
     mode: "onTouched",
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "components" });
-  const hasExam = form.watch("hasExam");
+  const hasExam = useWatch({ control: form.control, name: "hasExam" });
+  const componentValues = useWatch({ control: form.control, name: "components" });
+  const [selectedGradeLevel, selectedSubject, selectedRegime, selectedRounding] = useWatch({ control: form.control, name: ["gradeLevelId", "subjectId", "regime", "roundingMode"] });
 
   function handleSubmit(values: CreateAssessmentSchemeInput) {
     setFormError(null);
@@ -209,7 +214,7 @@ function AssessmentSchemeForm({
           <SelectField
             label={t("create.fields.gradeLevelId")}
             disabled={isPending}
-            value={form.watch("gradeLevelId") ?? "none"}
+            value={selectedGradeLevel ?? "none"}
             onValueChange={(value) => form.setValue("gradeLevelId", value, { shouldDirty: true })}
             options={[
               { value: "none", label: t("generalScheme") },
@@ -220,7 +225,7 @@ function AssessmentSchemeForm({
           <SelectField
             label={t("create.fields.subjectId")}
             disabled={isPending}
-            value={form.watch("subjectId") ?? "none"}
+            value={selectedSubject ?? "none"}
             onValueChange={(value) => form.setValue("subjectId", value, { shouldDirty: true })}
             options={[
               { value: "none", label: t("generalScheme") },
@@ -231,7 +236,7 @@ function AssessmentSchemeForm({
           <SelectField
             label={t("create.fields.regime")}
             disabled={isPending}
-            value={form.watch("regime")}
+            value={selectedRegime}
             onValueChange={(value) => form.setValue("regime", value as CreateAssessmentSchemeInput["regime"], { shouldDirty: true })}
             options={Object.values(AssessmentRegime).map((regime) => ({ value: regime, label: t(`regime.${regime}`) }))}
           />
@@ -267,7 +272,7 @@ function AssessmentSchemeForm({
           <SelectField
             label={t("create.fields.roundingMode")}
             disabled={isPending}
-            value={form.watch("roundingMode")}
+            value={selectedRounding}
             onValueChange={(value) =>
               form.setValue("roundingMode", value as CreateAssessmentSchemeInput["roundingMode"], { shouldDirty: true })
             }
@@ -371,7 +376,7 @@ function AssessmentSchemeForm({
               <SelectField
                 label={t("create.components.type")}
                 disabled={isPending}
-                value={form.watch(`components.${index}.type`)}
+                value={componentValues?.[index]?.type ?? field.type}
                 onValueChange={(value) =>
                   form.setValue(`components.${index}.type`, value as CreateAssessmentSchemeInput["components"][number]["type"], {
                     shouldDirty: true,

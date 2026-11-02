@@ -247,4 +247,19 @@ describe("reopenAttendance", () => {
     const reopened = await prisma.attendanceSession.findUniqueOrThrow({ where: { id: sessionId } });
     expect(reopened.status).toBe("DRAFT");
   });
+  it("does not audit a second reopening of an already open session", async () => {
+    mockAuth.mockResolvedValue(sessionAs(teacherUserId));
+    const count = await prisma.auditLog.count({ where: { schoolId, action: "attendance.reopen" } });
+    expect(await reopenAttendance(sessionId)).toEqual({ status: "error", message: "attendance.errors.alreadyOpen" });
+    expect(await prisma.auditLog.count({ where: { schoolId, action: "attendance.reopen" } })).toBe(count);
+  });
+  it("serializes two concurrent reopenings and keeps a single before snapshot", async () => {
+    await prisma.attendanceSession.update({ where: { id: sessionId }, data: { status: "SUBMITTED" } });
+    mockAuth.mockResolvedValue(sessionAs(teacherUserId));
+    const count = await prisma.auditLog.count({ where: { schoolId, action: "attendance.reopen" } });
+    const results = await Promise.all([reopenAttendance(sessionId), reopenAttendance(sessionId)]);
+    expect(results.filter((result) => result.status === "success")).toHaveLength(1);
+    expect(await prisma.auditLog.count({ where: { schoolId, action: "attendance.reopen" } })).toBe(count + 1);
+  });
+
 });

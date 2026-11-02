@@ -117,4 +117,12 @@ describe("payments data", () => {
     const receipt = await getReceipt(schoolId, initiatedPaymentId);
     expect(receipt).toBeNull();
   });
+  it("returns the persisted currency in invoice and receipt DTOs", async () => {
+    const source = await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+    const invoice = await prisma.invoice.create({ data: { schoolId, enrollmentId: source.enrollmentId, reference: `USD-${suffix}`, currency: "USD", subtotal: 100, total: 100, paidAmount: 100, status: "PAID", dueDate: source.dueDate } });
+    const payment = await prisma.payment.create({ data: { schoolId, invoiceId: invoice.id, currency: "USD", amount: 100, method: "CASH", status: "CONFIRMED", idempotencyKey: `USD-${suffix}`, confirmedAt: new Date() } });
+    expect((await getInvoiceForPayment(schoolId, invoice.id))?.currency).toBe("USD");
+    expect((await getReceipt(schoolId, payment.id))?.currency).toBe("USD");
+  });
+
 });

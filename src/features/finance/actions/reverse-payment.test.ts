@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Role } from "@/types";
@@ -93,7 +94,7 @@ describe("reversePayment", () => {
   });
 
   it("recusa reverter sem motivo", async () => {
-    await recordManualPayment({ invoiceId, amount: 1800, method: "CASH" } as never);
+    await recordManualPayment({ idempotencyKey: randomUUID(), invoiceId, amount: 1800, method: "CASH" } as never);
     const payment = await prisma.payment.findFirstOrThrow({ where: { invoiceId } });
 
     const result = await reversePayment({ paymentId: payment.id, reason: "" } as never);

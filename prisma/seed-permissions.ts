@@ -1,38 +1,20 @@
-/**
- * Semeia o catálogo fixo de `Permission` — ao contrário de `seed.ts` (que só corre uma
- * vez, contra uma base vazia), este script é idempotente: pode correr em qualquer altura,
- * em qualquer ambiente, sem apagar nem duplicar nada. É o que faz sentido para um
- * catálogo que só cresce quando o próprio código ganha uma verificação nova.
- *
- * Correr com: pnpm db:seed:permissions
- */
+/** Idempotent reference data. Existing roles and grants are never changed. */
+import { config } from "dotenv";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PERMISSION_CATALOG } from "../src/features/identity/domain/permission-catalog";
+import { seedPermissionCatalog } from "../src/lib/db/permission-catalog-seed";
+import { assertTestDatabaseUrl } from "../src/test/database-safety";
 
-const prisma = new PrismaClient({
-  adapter: new PrismaMariaDb(process.env.DATABASE_URL as string),
-});
-
+config({ path: [".env.local", ".env"], quiet: true });
 async function main() {
-  const before = await prisma.permission.count();
-
-  for (const entry of PERMISSION_CATALOG) {
-    await prisma.permission.upsert({
-      where: { resource_action: { resource: entry.resource, action: entry.action } },
-      update: {},
-      create: { resource: entry.resource, action: entry.action },
-    });
-  }
-
-  const after = await prisma.permission.count();
-  console.log(`Catálogo de permissões: ${PERMISSION_CATALOG.length} combinações, ${after - before} novas.`);
-  await prisma.$disconnect();
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("A database connection is required.");
+  if (process.env.NODE_ENV === "test" && (assertTestDatabaseUrl(process.env.TEST_DATABASE_URL) !== url)) throw new Error("Test seeds must use the reserved test database.");
+  const prisma = new PrismaClient({ adapter: new PrismaMariaDb(url) });
+  try {
+    await seedPermissionCatalog(prisma);
+    console.log(`Permission catalog ready: ${PERMISSION_CATALOG.length} supported entries; no role grants changed.`);
+  } finally { await prisma.$disconnect(); }
 }
-
-main().catch(async (error) => {
-  console.error(error);
-  await prisma.$disconnect();
-  process.exit(1);
-});
+main().catch(() => { console.error("Permission catalog initialization failed. No role grants were changed."); process.exitCode = 1; });

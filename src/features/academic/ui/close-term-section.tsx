@@ -14,40 +14,48 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { reopenTerm } from "@/features/academic/actions/reopen-term";
 import { closeTerm } from "@/features/academic/actions/close-term";
 import type { TermOption } from "@/features/academic/data/term-results";
 import { useRouter } from "@/i18n/navigation";
 
 interface CloseTermSectionProps {
+  readonly canClose?: boolean;
   readonly terms: readonly TermOption[];
 }
 
-/**
- * Fecho de trimestre — raio de acção grande (todas as disciplinas, todos os alunos), sem
- * forma de reabrir nesta fase (ver design.md, Non-Goals). Por isso nunca um botão directo:
- * sempre um ecrã de confirmação explícito antes de correr.
- */
-export function CloseTermSection({ terms }: CloseTermSectionProps) {
+/** Closing and audited reopening share the established confirmation dialog. */
+export function CloseTermSection({ terms, canClose = true }: CloseTermSectionProps) {
   const t = useTranslations("termClosing");
+  const tForm = useTranslations("form");
   const router = useRouter();
   const [confirming, setConfirming] = useState<TermOption | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const isReopening = confirming?.status === "CLOSED";
+  function beginConfirmation(term: TermOption) {
+    setError(null);
+    setReason("");
+    setConfirming(term);
+  }
 
   function handleConfirm() {
     if (!confirming) return;
     setError(null);
 
     startTransition(async () => {
-      const result = await closeTerm({ termId: confirming.id });
+      try {
+        const result = isReopening ? await reopenTerm({ termId: confirming.id, reason }) : await closeTerm({ termId: confirming.id });
 
-      if (result.status === "error") {
-        setError(result.message);
-        return;
-      }
+        if (result.status === "error") {
+          setError(result.message);
+          return;
+        }
 
-      setConfirming(null);
-      router.refresh();
+        setConfirming(null);
+        router.refresh();
+      } catch { setError(tForm("genericError")); router.refresh(); }
     });
   }
 
@@ -74,9 +82,9 @@ export function CloseTermSection({ terms }: CloseTermSectionProps) {
                 </Badge>
               </div>
 
-              {term.status === "OPEN" ? (
-                <Button size="sm" variant="secondary" onClick={() => setConfirming(term)}>
-                  {t("trigger")}
+              {canClose ? (
+                <Button size="sm" variant="secondary" onClick={() => beginConfirmation(term)}>
+                  {t(term.status === "CLOSED" ? "reopenTrigger" : "trigger")}
                 </Button>
               ) : null}
             </li>
@@ -84,12 +92,20 @@ export function CloseTermSection({ terms }: CloseTermSectionProps) {
         </ul>
       )}
 
-      <Dialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
+      <Dialog open={confirming !== null && terms.some((term) => term.id === confirming.id && term.status === confirming.status)} onOpenChange={(open) => !open && setConfirming(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("confirmTitle", { term: confirming?.name ?? "" })}</DialogTitle>
-            <DialogDescription>{t("confirmDescription")}</DialogDescription>
+            <DialogTitle>{t(isReopening ? "reopenTitle" : "confirmTitle", { term: confirming?.name ?? "" })}</DialogTitle>
+            <DialogDescription>{t(isReopening ? "reopenDescription" : "confirmDescription")}</DialogDescription>
           </DialogHeader>
+
+          {isReopening ? (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="term-reopen-reason" className="text-sm font-medium text-foreground">{t("reasonLabel")}</label>
+              <textarea id="term-reopen-reason" aria-describedby="term-reopen-hint" required minLength={10} maxLength={1000} disabled={isPending} value={reason} onChange={(event) => setReason(event.target.value)} className="min-h-28 w-full resize-y rounded-md border border-border-strong bg-surface px-4 py-3 text-base text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />
+              <p id="term-reopen-hint" className="text-sm text-muted-foreground">{t("reasonHint")}</p>
+            </div>
+          ) : null}
 
           {error ? (
             <p
@@ -105,8 +121,8 @@ export function CloseTermSection({ terms }: CloseTermSectionProps) {
             <Button type="button" variant="ghost" disabled={isPending} onClick={() => setConfirming(null)}>
               {t("cancel")}
             </Button>
-            <Button type="button" variant="destructive" disabled={isPending} onClick={handleConfirm}>
-              {isPending ? t("closing") : t("confirm")}
+            <Button type="button" variant="destructive" disabled={isPending || (isReopening && reason.trim().length < 10)} onClick={handleConfirm}>
+              {isPending ? t(isReopening ? "reopening" : "closing") : t(isReopening ? "reopenConfirm" : "confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

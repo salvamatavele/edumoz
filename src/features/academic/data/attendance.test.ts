@@ -138,6 +138,19 @@ describe("director de turma — presenças", () => {
     expect(await listTeacherScheduleForDate(schoolId, otherTeacherId, today)).toEqual([]);
   });
 
+  it("rejects invalid dates and dates outside the active school year", async () => {
+    for (const date of [new Date("invalid"), new Date("2025-03-02")]) {
+      expect(await getAttendanceRoster(schoolId, scheduleEntryId, date, ownTeacherId)).toBeNull();
+      expect(await listTeacherScheduleForDate(schoolId, ownTeacherId, date)).toEqual([]);
+    }
+    const wrongWeekday = new Date(today.getTime() + 86400000);
+    expect(await getAttendanceRoster(schoolId, scheduleEntryId, wrongWeekday, ownTeacherId)).toBeNull();
+  });
+
+  it("does not treat an administrative roster read as teaching ownership", async () => {
+    expect((await getAttendanceRoster(schoolId, scheduleEntryId, today))?.isOwn).toBe(false);
+  });
+
   it("getAttendanceRoster: isOwn verdadeiro para o professor dono", async () => {
     const roster = await getAttendanceRoster(schoolId, scheduleEntryId, today, ownTeacherId);
     expect(roster?.isOwn).toBe(true);

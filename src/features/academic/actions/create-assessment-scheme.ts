@@ -11,8 +11,8 @@ import {
 } from "@/features/academic/domain/assessment-scheme-schema";
 import { validateScheme } from "@/features/academic/domain/grade-engine";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { toDecimal, toDecimalOrNull } from "@/features/shared/domain/numeric";
 import { getPathname } from "@/i18n/navigation";
@@ -63,15 +63,9 @@ export async function createAssessmentScheme(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "assessment-schemes", "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 

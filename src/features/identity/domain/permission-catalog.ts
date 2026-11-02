@@ -7,6 +7,8 @@
  */
 
 export const PERMISSION_RESOURCES = [
+  "users",
+  "school-staff",
   "students",
   "enrollments",
   "attendance",
@@ -16,6 +18,8 @@ export const PERMISSION_RESOURCES = [
   "academic-structure",
   "teaching-staff",
   "assessment-schemes",
+  "finance",
+  "scheduling",
 ] as const;
 
 export type PermissionResource = (typeof PERMISSION_RESOURCES)[number];
@@ -35,5 +39,27 @@ export interface PermissionCatalogEntry {
 
 /** Todas as combinações recurso × acção — o que `seed-permissions.ts` semeia. */
 export const PERMISSION_CATALOG: readonly PermissionCatalogEntry[] = PERMISSION_RESOURCES.flatMap(
-  (resource) => PERMISSION_ACTIONS.map((action) => ({ resource, action })),
+  (resource) => PERMISSION_ACTIONS.filter((action) => !["users", "school-staff"].includes(resource) || action !== "delete").map((action) => ({ resource, action })),
 );
+
+/** Only these pairs currently protect a real administrative page or mutation. */
+export const CONSUMED_PERMISSION_ACTIONS = {
+  users: ["view", "create", "edit"],
+  "school-staff": ["view", "create", "edit"],
+  students: ["view", "create"],
+  enrollments: ["create"],
+  attendance: ["view", "edit"],
+  grades: [],
+  "term-closing": ["view", "edit"],
+  "report-cards": ["view"],
+  "academic-structure": ["view", "create"],
+  "teaching-staff": ["view", "create"],
+  "assessment-schemes": ["view", "create"],
+  finance: ["view", "create", "edit"],
+  scheduling: ["view", "create", "edit"],
+} as const satisfies Record<PermissionResource, readonly PermissionAction[]>;
+export function isConsumedPermission(resource: string, action: string): boolean {
+  return Object.hasOwn(CONSUMED_PERMISSION_ACTIONS, resource)
+    && (CONSUMED_PERMISSION_ACTIONS[resource as PermissionResource] as readonly string[]).includes(action);
+}
+export const CONSUMED_PERMISSION_CATALOG = PERMISSION_CATALOG.filter(row => isConsumedPermission(row.resource, row.action));

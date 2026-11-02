@@ -38,21 +38,23 @@ export function GenerateInvoicesForm({ feeSchedules }: GenerateInvoicesFormProps
     setMessage(null);
 
     startTransition(async () => {
-      const result = await generateInvoices({
-        feeScheduleId,
-        periodYear: Number(periodYear),
-        periodMonth: periodMonth ? Number(periodMonth) : undefined,
-      });
+      try {
+        const result = await generateInvoices({
+          feeScheduleId,
+          periodYear: Number(periodYear),
+          periodMonth: periodMonth ? Number(periodMonth) : undefined,
+        });
 
-      if (result.status === "error") {
-        setError(result.message ?? tForm("genericError"));
-        return;
-      }
+        if (result.status === "error") {
+          setError(result.message ?? tForm("genericError"));
+          return;
+        }
 
-      setMessage(
-        t("invoicing.generateResult", { created: result.created ?? 0, skipped: result.skipped ?? 0 }),
-      );
-      router.refresh();
+        setMessage(
+          t("invoicing.generateResult", { created: result.created ?? 0, skipped: result.skipped ?? 0 }),
+        );
+        router.refresh();
+      } catch { setError(tForm("genericError")); router.refresh(); }
     });
   }
 

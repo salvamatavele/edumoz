@@ -94,6 +94,7 @@ interface GradeSheetProps {
    * recusaria de qualquer forma, mas esconder a edição evita um envio que falha calado.
    */
   readonly readOnly?: boolean;
+  readonly termClosed?: boolean;
 }
 
 interface RowState {
@@ -108,15 +109,23 @@ interface RowState {
  * explícito). A média por aluno usa `computeSubjectResult`, o MESMO motor que o servidor —
  * nunca uma segunda implementação da fórmula aqui.
  */
-export function GradeSheet({
+export function GradeSheet(props: GradeSheetProps) {
+  // Server refreshes keep drafts only while the authoritative snapshot is unchanged.
+  return <GradeSheetBody key={JSON.stringify(props)} {...props} />;
+}
+
+function GradeSheetBody({
   assessment,
   teachingGroupName,
   subjectName,
   scheme,
   initialEntries,
-  readOnly = false,
+  readOnly: readOnlyForRole = false,
+  termClosed = false,
 }: GradeSheetProps) {
+  const readOnly = readOnlyForRole || termClosed;
   const t = useTranslations("gradeEntry");
+  const tForm = useTranslations("form");
   const tNotes = useTranslations("gradeEntry.notes");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -159,26 +168,28 @@ export function GradeSheet({
     setError(null);
 
     startTransition(async () => {
-      const changes = rows
-        .filter((row) => {
-          const initial = entriesByEnrollment.get(row.enrollmentId);
-          const initialScore = initial?.score ?? "";
-          return initialScore !== row.score || (initial?.isAbsent ?? false) !== row.isAbsent;
-        })
-        .map((row) => ({
-          enrollmentId: row.enrollmentId,
-          score: row.isAbsent || row.score.trim() === "" ? undefined : Number(row.score),
-          isAbsent: row.isAbsent,
-        }));
+      try {
+        const changes = rows
+          .filter((row) => {
+            const initial = entriesByEnrollment.get(row.enrollmentId);
+            const initialScore = initial?.score ?? "";
+            return initialScore !== row.score || (initial?.isAbsent ?? false) !== row.isAbsent;
+          })
+          .map((row) => ({
+            enrollmentId: row.enrollmentId,
+            score: row.isAbsent || row.score.trim() === "" ? undefined : Number(row.score),
+            isAbsent: row.isAbsent,
+          }));
 
-      const result = await recordGrades({ assessmentId: assessment.id, changes });
+        const result = await recordGrades({ assessmentId: assessment.id, changes });
 
-      if (result.status === "error") {
-        setError(result.message);
-        return;
-      }
+        if (result.status === "error") {
+          setError(result.message);
+          return;
+        }
 
-      router.refresh();
+        router.refresh();
+      } catch { setError(tForm("genericError")); router.refresh(); }
     });
   }
 
@@ -193,7 +204,7 @@ export function GradeSheet({
 
       {readOnly ? (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-muted-foreground">
-          {t("headTeacherReadOnlyNotice")}
+          {t(termClosed ? "termClosedNotice" : "headTeacherReadOnlyNotice")}
         </p>
       ) : null}
 

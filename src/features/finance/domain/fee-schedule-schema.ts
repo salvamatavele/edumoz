@@ -22,7 +22,7 @@ export const createFeeItemSchema = z.object({
   feeScheduleId: z.string().trim().min(1),
   code: z.string().trim().min(1),
   name: z.string().trim().min(1),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().positive().max(9999999999.99).multipleOf(0.01),
   recurrence: z.enum(FeeRecurrence),
   dueDayOfMonth: optionalNumberField(z.coerce.number().int().min(1).max(31)),
   isMandatory: z.boolean(),

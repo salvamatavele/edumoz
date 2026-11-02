@@ -32,6 +32,16 @@ describe("SchoolSwitcher", () => {
     mockListSchoolsForSwitcher.mockReset().mockResolvedValue([]);
   });
 
+  it("uses fresh server access after revocation even when useSession still contains the old school", async () => {
+    const update = vi.fn().mockResolvedValue({});
+    mockUseSession.mockReturnValue({ data: { schoolId: schoolA.schoolId, memberships: [schoolA, schoolB], isPlatformAdmin: false }, status: "authenticated", update } as never);
+    renderWithIntl(<SchoolSwitcher access={{ schoolId: null, isPlatformAdmin: false, memberships: [schoolB] }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Escola" }));
+    expect(screen.queryByRole("menuitemradio", { name: schoolA.schoolName })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("menuitemradio", { name: schoolB.schoolName }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ schoolId: schoolB.schoolId }));
+  });
+
   it("não aparece sem sessão", () => {
     mockUseSession.mockReturnValue({
       data: null,
@@ -54,6 +64,23 @@ describe("SchoolSwitcher", () => {
     renderWithIntl(<SchoolSwitcher />);
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("allows selecting the remaining school after the active membership is revoked", async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    mockUseSession.mockReturnValue({
+      data: { schoolId: null, memberships: [schoolB] },
+      status: "authenticated",
+      update,
+    } as never);
+
+    renderWithIntl(<SchoolSwitcher />);
+    await userEvent.click(screen.getByRole("button", { name: "Escola" }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: schoolB.schoolName }));
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({ schoolId: schoolB.schoolId });
+      expect(refresh).toHaveBeenCalled();
+    });
   });
 
   it("lista as escolas e troca a escola activa ao escolher outra", async () => {
@@ -93,6 +120,20 @@ describe("SchoolSwitcher", () => {
     );
 
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("lists each school once when the user has multiple roles there", async () => {
+    mockUseSession.mockReturnValue({ data: { schoolId: schoolA.schoolId, memberships: [schoolA, { ...schoolA, role: "TEACHER" }, schoolB] }, status: "authenticated", update: vi.fn() } as never);
+    renderWithIntl(<SchoolSwitcher />);
+    await userEvent.click(screen.getByRole("button", { name: "Escola" }));
+    expect(screen.getAllByRole("menuitemradio", { name: schoolA.schoolName })).toHaveLength(1);
+    expect(screen.getAllByRole("menuitemradio")).toHaveLength(2);
+  });
+
+  it("hides the selector for two roles in the same active school", () => {
+    mockUseSession.mockReturnValue({ data: { schoolId: schoolA.schoolId, memberships: [schoolA, { ...schoolA, role: "TEACHER" }] }, status: "authenticated", update: vi.fn() } as never);
+    renderWithIntl(<SchoolSwitcher />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   describe("administrador da plataforma", () => {

@@ -1,3 +1,7 @@
+import { hasLegacyFullProfileAccess } from "../domain/functional-permissions";
+import { countSchoolRoleMembers } from "./permission-role-member-counts";
+import { ROLE_OPTION_PAGE_SIZE } from "../domain/membership-role-schema";
+import { z } from "zod";
 import type { PermissionAction, PermissionResource } from "@/features/identity/domain/permission-catalog";
 import { getTenantDb } from "@/lib/db/tenant";
 
@@ -29,6 +33,7 @@ export interface PermissionRoleRow {
   readonly description: string | null;
   readonly permissionIds: readonly string[];
   readonly memberCount: number;
+  readonly isSystem: boolean;
 }
 
 /** Papéis configuráveis da escola, com as suas permissões marcadas. */
@@ -40,50 +45,67 @@ export async function listPermissionRoles(schoolId: string): Promise<PermissionR
       id: true,
       name: true,
       description: true,
+      isSystem: true,
       permissions: { select: { permissionId: true } },
-      _count: { select: { memberships: true } },
+
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
   });
 
+  const memberCounts = await countSchoolRoleMembers(schoolId);
   return roles.map((role) => ({
     id: role.id,
     name: role.name,
     description: role.description,
     permissionIds: role.permissions.map((p) => p.permissionId),
-    memberCount: role._count.memberships,
+    memberCount: memberCounts.get(role.id) ?? 0,
+    isSystem: role.isSystem,
   }));
 }
 
 export interface AssignableStaffRow {
   readonly membershipId: string;
   readonly userName: string;
-  readonly userEmail: string | null;
-  readonly permissionRoleId: string | null;
+  readonly baseRole: "SCHOOL_MANAGER" | "TEACHER";
+  readonly status: "ACTIVE" | "SUSPENDED";
+  readonly mode: "legacy" | "configured";
+  readonly assignedRoleCount: number;
+  readonly isCurrentUser: boolean;
+  readonly overrideCount?: number;
+  readonly activeOverrideCount?: number;
+}
+export const assignableStaffQuerySchema = z.object({
+  staffQuery: z.string().trim().max(120).default(""),
+  staffPage: z.coerce.number().int().min(1).max(10000).default(1),
+});
+export interface AssignableStaffPage {
+  readonly rows: readonly AssignableStaffRow[];
+  readonly query: string;
+  readonly page: number;
+  readonly total: number;
+  readonly pageCount: number;
 }
 
-/**
- * Gestores da escola (`role: SCHOOL_MANAGER`) — só estes podem ter um `PermissionRole`
- * atribuído (ver schema.prisma). O próprio superadmin nem sempre tem `Membership`, por
- * isso não aparece aqui — o seu acesso não depende de nenhuma.
- */
-export async function listAssignableStaff(schoolId: string): Promise<AssignableStaffRow[]> {
+/** Bounded staff associations; only the server decides which row belongs to the viewer. */
+export async function listAssignableStaff(schoolId: string, viewerUserId: string, input: z.infer<typeof assignableStaffQuerySchema>): Promise<AssignableStaffPage> {
   const db = getTenantDb(schoolId);
-
+  const where = { role: { in: ["SCHOOL_MANAGER", "TEACHER"] as ("SCHOOL_MANAGER" | "TEACHER")[] }, status: { in: ["ACTIVE", "SUSPENDED"] as ("ACTIVE" | "SUSPENDED")[] }, user: { isPlatformAdmin: false, ...(input.staffQuery ? { name: { contains: input.staffQuery } } : {}) } };
+  const total = await db.membership.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / ROLE_OPTION_PAGE_SIZE));
+  const page = Math.min(input.staffPage, pageCount);
   const memberships = await db.membership.findMany({
-    where: { role: "SCHOOL_MANAGER", status: "ACTIVE" },
-    select: {
-      id: true,
-      permissionRoleId: true,
-      user: { select: { name: true, email: true } },
-    },
-    orderBy: { user: { name: "asc" } },
+    where, skip: (page - 1) * ROLE_OPTION_PAGE_SIZE, take: ROLE_OPTION_PAGE_SIZE,
+    select: { id: true, role: true, status: true, permissionRoleId: true, permissionsConfigured: true, _count: { select: { permissionOverrides: true } }, assignedRoles: { select: { permissionRoleId: true } }, user: { select: { id: true, name: true } } },
+    orderBy: [{ user: { name: "asc" } }, { id: "asc" }],
   });
-
-  return memberships.map((membership) => ({
-    membershipId: membership.id,
-    userName: membership.user.name ?? membership.user.email ?? "—",
-    userEmail: membership.user.email,
-    permissionRoleId: membership.permissionRoleId,
-  }));
+  const activeAssociations = memberships.length ? await db.membership.findMany({ where: { userId: { in: [...new Set(memberships.map(member => member.user.id))] }, status: "ACTIVE", role: { in: ["SCHOOL_MANAGER", "TEACHER"] } }, select: { userId: true, _count: { select: { permissionOverrides: true } } } }) : [];
+  const activeOverrides = new Map<string, number>();
+  for (const member of activeAssociations) activeOverrides.set(member.userId, (activeOverrides.get(member.userId) ?? 0) + member._count.permissionOverrides);
+  return { query: input.staffQuery, total, page, pageCount, rows: memberships.map(member => ({
+    membershipId: member.id, userName: member.user.name ?? "",
+    baseRole: member.role as "SCHOOL_MANAGER" | "TEACHER", status: member.status as "ACTIVE" | "SUSPENDED", mode: hasLegacyFullProfileAccess(member) ? "legacy" : "configured",
+    assignedRoleCount: new Set([...member.assignedRoles.map(row => row.permissionRoleId), ...(member.role === "SCHOOL_MANAGER" && member.permissionRoleId ? [member.permissionRoleId] : [])]).size,
+    isCurrentUser: member.user.id === viewerUserId,
+    overrideCount: member._count.permissionOverrides, activeOverrideCount: activeOverrides.get(member.user.id) ?? 0,
+  })) };
 }

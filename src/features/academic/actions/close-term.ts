@@ -9,10 +9,11 @@ import {
   type CloseTermActionResult,
   type CloseTermInput,
 } from "@/features/academic/domain/term-closing-schema";
+import { requireTermState, TermMutationError } from "@/features/academic/data/term-mutations";
 import { computeSubjectResult } from "@/features/academic/domain/grade-engine";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -36,15 +37,9 @@ export async function closeTerm(values: CloseTermInput): Promise<CloseTermAction
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "term-closing", "edit")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -57,101 +52,90 @@ export async function closeTerm(values: CloseTermInput): Promise<CloseTermAction
   const { schoolId } = session;
   const db = getTenantDb(schoolId);
 
-  const term = await db.term.findUnique({
-    where: { id: parsed.data.termId },
-    select: { id: true, status: true },
-  });
-
-  if (!term) {
-    return { status: "error", message: t("termClosing.errors.notFound") };
-  }
-
-  if (term.status === "CLOSED") {
-    return { status: "error", message: t("termClosing.errors.alreadyClosed") };
-  }
-
-  const plan = await getTermClosingPlan(schoolId, term.id);
-  if (!plan) {
-    return { status: "error", message: t("termClosing.errors.notFound") };
-  }
-
-  const schemes = await listSchemesForYear(schoolId, plan.academicYearId);
-
   let resultCount = 0;
+  try {
+    await db.$transaction(async (tx) => {
+      await requireTermState(tx, parsed.data.termId, "OPEN");
+      const term = { id: parsed.data.termId };
+      const plan = await getTermClosingPlan(schoolId, term.id, tx);
+      if (!plan) throw new TermMutationError("not-found");
+      const schemes = await listSchemesForYear(schoolId, plan.academicYearId, tx);
+      for (const subjectEntry of plan.subjectEntries) {
+        const resolved = pickScheme(schemes, {
+          gradeLevelId: subjectEntry.gradeLevelId,
+          subjectId: subjectEntry.subjectId,
+        });
 
-  await db.$transaction(async (tx) => {
-    for (const subjectEntry of plan.subjectEntries) {
-      const resolved = pickScheme(schemes, {
-        gradeLevelId: subjectEntry.gradeLevelId,
-        subjectId: subjectEntry.subjectId,
-      });
+        // Sem esquema aplicável, não há fórmula com que calcular — esta disciplina fica de
+        // fora do fecho, em vez de gravar um resultado inventado.
+        if (!resolved) continue;
 
-      // Sem esquema aplicável, não há fórmula com que calcular — esta disciplina fica de
-      // fora do fecho, em vez de gravar um resultado inventado.
-      if (!resolved) continue;
+        const result = computeSubjectResult(resolved.definition, subjectEntry.entries);
 
-      const result = computeSubjectResult(resolved.definition, subjectEntry.entries);
+        const componentAverages: Record<string, string | null> = {};
+        for (const component of result.components) {
+          componentAverages[component.componentCode] = component.average?.toString() ?? null;
+        }
 
-      const componentAverages: Record<string, string | null> = {};
-      for (const component of result.components) {
-        componentAverages[component.componentCode] = component.average?.toString() ?? null;
-      }
-
-      await tx.termResult.upsert({
-        where: {
-          enrollmentId_subjectId_termId: {
+        await tx.termResult.upsert({
+          where: {
+            enrollmentId_subjectId_termId: {
+              enrollmentId: subjectEntry.enrollmentId,
+              subjectId: subjectEntry.subjectId,
+              termId: term.id,
+            },
+          },
+          create: {
+            schoolId,
             enrollmentId: subjectEntry.enrollmentId,
             subjectId: subjectEntry.subjectId,
             termId: term.id,
+            schemeId: resolved.schemeId,
+            schemeVersion: resolved.definition.version,
+            componentAverages,
+            average: result.average?.toString() ?? null,
+            examScore: result.examScore?.toString() ?? null,
+            finalScore: result.finalScore?.toString() ?? null,
+            isExempt: result.isExempt,
+            isAdmittedToExam: result.isAdmittedToExam,
+            passed: result.passed,
           },
-        },
-        create: {
-          schoolId,
-          enrollmentId: subjectEntry.enrollmentId,
-          subjectId: subjectEntry.subjectId,
-          termId: term.id,
-          schemeId: resolved.schemeId,
-          schemeVersion: resolved.definition.version,
-          componentAverages,
-          average: result.average?.toString() ?? null,
-          examScore: result.examScore?.toString() ?? null,
-          finalScore: result.finalScore?.toString() ?? null,
-          isExempt: result.isExempt,
-          isAdmittedToExam: result.isAdmittedToExam,
-          passed: result.passed,
-        },
-        update: {
-          schemeId: resolved.schemeId,
-          schemeVersion: resolved.definition.version,
-          componentAverages,
-          average: result.average?.toString() ?? null,
-          examScore: result.examScore?.toString() ?? null,
-          finalScore: result.finalScore?.toString() ?? null,
-          isExempt: result.isExempt,
-          isAdmittedToExam: result.isAdmittedToExam,
-          passed: result.passed,
-        },
+          update: {
+            schemeId: resolved.schemeId,
+            schemeVersion: resolved.definition.version,
+            componentAverages,
+            average: result.average?.toString() ?? null,
+            examScore: result.examScore?.toString() ?? null,
+            finalScore: result.finalScore?.toString() ?? null,
+            isExempt: result.isExempt,
+            isAdmittedToExam: result.isAdmittedToExam,
+            passed: result.passed,
+          },
+        });
+
+        resultCount += 1;
+      }
+
+      await tx.term.update({
+        where: { id: term.id },
+        data: { status: "CLOSED", closedAt: new Date(), closedById: session.user.id },
       });
 
-      resultCount += 1;
-    }
-
-    await tx.term.update({
-      where: { id: term.id },
-      data: { status: "CLOSED", closedAt: new Date(), closedById: session.user.id },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "term.close",
-        entity: "Term",
-        entityId: term.id,
-        after: JSON.parse(JSON.stringify({ status: "CLOSED", resultCount })),
-      },
-    });
-  });
+      await tx.auditLog.create({
+        data: {
+          schoolId,
+          actorUserId: session.user.id,
+          action: "term.close",
+          entity: "Term",
+          entityId: term.id,
+          after: JSON.parse(JSON.stringify({ status: "CLOSED", resultCount })),
+        },
+      });
+    }, { isolationLevel: "RepeatableRead" });
+  } catch (error) {
+    if (error instanceof TermMutationError) return { status: "error", message: t(error.code === "closed" ? "termClosing.errors.alreadyClosed" : "termClosing.errors.notFound") };
+    throw error;
+  }
 
   for (const locale of routing.locales) {
     revalidatePath(getPathname({ locale, href: "/assessment" }));

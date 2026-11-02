@@ -9,8 +9,8 @@ import {
   type CreateTeacherInput,
 } from "@/features/academic/domain/teaching-staff-schema";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -19,9 +19,8 @@ import { Prisma, UNIQUE_CONSTRAINT_VIOLATION } from "@/lib/db/errors";
 import { getTenantDb } from "@/lib/db/tenant";
 
 /**
- * Cria um professor, sem conta de utilizador associada — `userId` não faz parte do
- * esquema nem do formulário; liga-se só pela base de dados por agora (ver
- * docs/specs/attendance.md, gap conhecido desde a Fase 6).
+ * Create a teacher profile without account access. The identity administration flow
+ * verifies and links an existing account separately; userId is never accepted here.
  */
 export async function createTeacher(
   values: CreateTeacherInput,
@@ -34,15 +33,9 @@ export async function createTeacher(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "teaching-staff", "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 

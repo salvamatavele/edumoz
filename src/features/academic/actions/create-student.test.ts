@@ -74,7 +74,7 @@ describe("createStudent", () => {
       memberships: role
         ? [{ schoolId, schoolName: "Escola de teste", role }]
         : [],
-    } as never;
+    };
   }
 
   function input(overrides: Partial<Record<string, unknown>> = {}) {
@@ -88,6 +88,22 @@ describe("createStudent", () => {
       ...overrides,
     } as never;
   }
+
+  it.each([
+    { permissions: [{ resource: "students", action: "view" }] },
+    { permissions: [{ resource: "finance", action: "create" }] },
+    { permissions: [] },
+  ])("recusa criação directa com permissões insuficientes: %j", async ({ permissions }) => {
+    mockAuth.mockResolvedValue({
+      ...sessionAs("SCHOOL_MANAGER"),
+      permissionRoleId: "restricted-role",
+      permissions,
+    });
+    const before = await prisma.student.count({ where: { schoolId } });
+    expect((await createStudent(input({ code: `DENIED-${before}` }))).status).toBe("error");
+    expect(await prisma.student.count({ where: { schoolId } })).toBe(before);
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
 
   it("recusa sem sessão", async () => {
     mockAuth.mockResolvedValue(null);

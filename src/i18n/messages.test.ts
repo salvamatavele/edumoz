@@ -1,3 +1,4 @@
+import { parse, TYPE, type MessageFormatElement } from "@formatjs/icu-messageformat-parser";
 import { describe, expect, it } from "vitest";
 
 import en from "../../messages/en.json";
@@ -21,9 +22,20 @@ function flatten(tree: Tree, prefix = ""): string[] {
   });
 }
 
-/** Marcadores ICU: `{year}`, `{page}`. Têm de existir nas duas línguas. */
+/** Compare argument names throughout the ICU tree, excluding translated branch text. */
 function placeholders(message: string): string[] {
-  return [...message.matchAll(/\{(\w+)[^}]*\}/g)].map((match) => match[1]).sort();
+  const names = new Set<string>();
+  function visit(elements: readonly MessageFormatElement[]) {
+    for (const element of elements) {
+      if (element.type === TYPE.literal || element.type === TYPE.pound) continue;
+      names.add(element.value);
+      if (element.type === TYPE.plural || element.type === TYPE.select) {
+        for (const option of Object.values(element.options)) visit(option.value);
+      } else if (element.type === TYPE.tag) visit(element.children);
+    }
+  }
+  visit(parse(message));
+  return [...names].sort();
 }
 
 function valueAt(tree: Tree, path: string): string {
@@ -90,5 +102,20 @@ describe("catálogos de mensagens", () => {
     });
 
     expect(untranslated).toEqual([]);
+  });
+});
+
+describe("ICU argument comparison", () => {
+  it("ignores translated plural branches and follows nested arguments", () => {
+    expect(placeholders("{count, plural, =0 {This role} one {One {name}} other {Many {name} {total, number}}}"))
+      .toEqual(["count", "name", "total"]);
+    expect(placeholders("{count, plural, one {Sim} other {Não}}")) .toEqual(["count"]);
+  });
+  it("handles nested selects, rich tags and quoted literal braces", () => {
+    expect(placeholders("'{literal}' {kind, select, first {<strong>{name}</strong>} other {{date, date}}}"))
+      .toEqual(["date", "kind", "name", "strong"]);
+  });
+  it("rejects malformed ICU instead of accepting an incomplete marker list", () => {
+    expect(() => placeholders("{count, plural, one {One}}")) .toThrow();
   });
 });

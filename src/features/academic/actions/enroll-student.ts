@@ -9,8 +9,8 @@ import {
   type EnrollStudentInput,
 } from "@/features/academic/domain/enrollment-schema";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -37,15 +37,9 @@ export async function enrollStudent(
     return { status: "error", message: t("students.form.errors.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "enrollments", "create")) {
     return { status: "error", message: t("students.form.errors.forbidden") };
   }
 
@@ -73,6 +67,18 @@ export async function enrollStudent(
   if (!academicYear) {
     return { status: "error", message: t("students.enroll.errors.noActiveYear") };
   }
+
+  // Give field feedback before writing; persistent guards still arbitrate races.
+  const [student, classGroup, studyPath] = await Promise.all([
+    db.student.findUnique({ where: { id: parsed.data.studentId }, select: { id: true } }),
+    db.classGroup.findFirst({ where: { id: parsed.data.classGroupId, academicYearId: academicYear.id }, select: { id: true } }),
+    db.studyPath.findFirst({ where: { id: parsed.data.studyPathId, academicYearId: academicYear.id }, select: { id: true } }),
+  ]);
+  const fieldErrors: Partial<Record<keyof EnrollStudentInput, string>> = {};
+  if (!student) fieldErrors.studentId = t("students.enroll.errors.studentId");
+  if (!classGroup) fieldErrors.classGroupId = t("students.enroll.errors.classGroupId");
+  if (!studyPath) fieldErrors.studyPathId = t("students.enroll.errors.studyPathId");
+  if (Object.keys(fieldErrors).length) return { status: "error", fieldErrors };
 
   try {
     await db.$transaction(async (tx) => {

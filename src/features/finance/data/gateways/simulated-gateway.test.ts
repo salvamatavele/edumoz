@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { PaymentRequest } from "@/features/finance/domain/ports/mobile-money-gateway";
@@ -6,7 +7,7 @@ import { SimulatedGateway } from "./simulated-gateway";
 
 function request(payerPhone: string): PaymentRequest {
   return {
-    idempotencyKey: `idem-${payerPhone}`,
+    idempotencyKey: randomUUID(),
     amount: 1800 as never,
     currency: "MZN",
     payerPhone,
@@ -53,7 +54,18 @@ describe("SimulatedGateway", () => {
     expect(second.confirmedAt).not.toBeNull();
   });
 
-  it("gera uma providerReference diferente a cada chamada de initiate", async () => {
+  it("reuses the original response for the same intent", async () => {
+    const payload = request("+258849876543");
+    const [a, b] = await Promise.all([gateway.initiate(payload), gateway.initiate(payload)]);
+    expect(a).toEqual(b);
+    await expect(gateway.initiate({ ...payload, payerPhone: "+258849999999" })).rejects.toThrow(/different parameters/);
+  });
+  it("never confirms an unknown or another provider's reference", async () => {
+    await expect(gateway.getStatus("SIM-unknown")).rejects.toThrow(/Unknown simulated reference/);
+    const result = await gateway.initiate(request("+258840000000"));
+    await expect(new SimulatedGateway("EMOLA").getStatus(result.providerReference!)).rejects.toThrow(/Unknown simulated reference/);
+  });
+  it("gera referências diferentes para intenções distintas", async () => {
     const a = await gateway.initiate(request("+258849876543"));
     const b = await gateway.initiate(request("+258849876543"));
     expect(a.providerReference).not.toBe(b.providerReference);

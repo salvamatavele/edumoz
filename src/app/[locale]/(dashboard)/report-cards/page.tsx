@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getReportCard, listReportCardFilters } from "@/features/academic/data/report-cards";
-import { isFamilyRole } from "@/features/identity/domain/access";
+import { hasPermission, isFamilyRole, toSessionContext } from "@/features/identity/domain/access";
+import { AccessDenied } from "@/components/layout/access-denied";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "@/lib/auth/config";
 
@@ -42,15 +43,20 @@ export default async function ReportCardsPage({
     redirect({ href: "/portal", locale });
   }
 
+  if (session.role !== "TEACHER" && !hasPermission(toSessionContext(session), "report-cards", "view")) {
+    return <AccessDenied message={t("auth.noAccess")} />;
+  }
+
   const resolvedSearchParams = await searchParams;
   const classGroupId = typeof resolvedSearchParams.turma === "string" ? resolvedSearchParams.turma : "";
   const subjectId = typeof resolvedSearchParams.disciplina === "string" ? resolvedSearchParams.disciplina : "";
   const termId = typeof resolvedSearchParams.periodo === "string" ? resolvedSearchParams.periodo : "";
 
-  const filters = await listReportCardFilters(session.schoolId);
+  const teacherUserId = session.role === "TEACHER" && !hasPermission(toSessionContext(session), "report-cards", "view") ? session.user.id : undefined;
+  const filters = await listReportCardFilters(session.schoolId, teacherUserId);
   const reportCard =
     classGroupId && subjectId && termId
-      ? await getReportCard(session.schoolId, classGroupId, subjectId, termId)
+      ? await getReportCard(session.schoolId, classGroupId, subjectId, termId, teacherUserId)
       : null;
 
   return (

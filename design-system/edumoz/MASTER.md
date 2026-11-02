@@ -1,227 +1,78 @@
-# Design System Master File
+# EduMoz — Sistema de design consolidado
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+Actualizado em 2026-10-27 durante a tarefa 1.7. Preserva as decisões implementadas e aprovadas; substitui as sugestões genéricas do documento gerado em Agosto.
 
----
+## Fontes de verdade
 
-**Project:** EduMoz
-**Generated:** 2026-08-16 01:14:18
-**Category:** Educational App
-**Design Dials:** Variance 4/10 (Balanced / Modern) | Motion 4/10 (Standard) | Density 7/10 (Standard)
+1. `src/app/globals.css`: valores executáveis, temas e aliases Tailwind 4.
+2. `docs/specs/design-system.md`: requisitos e decisões de acessibilidade aprovados.
+3. Este documento: orientação de aplicação; valores abaixo extraídos dos tokens actuais.
+4. `src/components/ui/README.md`: composição dos primitivos Radix/shadcn com tokens EduMoz.
+5. `/sistema-de-design` e `/en/design-system`: referência visual viva.
 
----
+Uma orientação de página pode complementar estas regras, mas não substituir a marca, contraste, temas ou idiomas sem requisito explícito. Não aplicar automaticamente paletas/fontes recomendadas por uma pesquisa de skill a um produto já estabelecido.
 
-## Global Rules
+## Identidade e experiência
 
-### Color Palette
+EduMoz é uma ferramenta de gestão escolar para a realidade moçambicana, com várias escolas e perfis. Estilo Soft UI Evolution: superfícies legíveis, profundidade discreta e hierarquia adequada a dados densos. Preservar layout e shell existentes. Marca teal, acções âmbar, estados semânticos com texto/ícone. Ícones Lucide consistentes com a aplicação.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#0D9488` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#2DD4BF` | `--color-secondary` |
-| Accent/CTA | `#D97706` | `--color-accent` |
-| Background | `#F0FDFA` | `--color-background` |
-| Foreground | `#134E4A` | `--color-foreground` |
-| Muted | `#E8F1F4` | `--color-muted` |
-| Border | `#5EEAD4` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#0D9488` | `--color-ring` |
+Texto claro e directo em pt-MZ e inglês; mensagens por chave nos catálogos, datas e moeda com formatadores do projecto. Mostrar sempre a escola activa onde necessário para evitar operações no contexto errado. A ocultação de navegação por permissão é apenas apresentação; o servidor valida cada acesso.
 
-**Color Notes:** Education teal + course amber + grade green
+## Tipografia
 
-### Typography
+- Títulos: Lexend, `--font-heading` / `--font-lexend`.
+- Corpo: Source Sans 3, `--font-sans` / `--font-source-sans`.
+- Fontes carregadas por `next/font`, com `display: swap`.
+- Corpo de 16px, escala e entrelinhas definidas em `globals.css`; números tabulares em tabelas.
+- Fira Code/Fira Sans eram sugestões anteriores e não fazem parte da identidade implementada.
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap)
+## Temas e tokens
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-```
+Claro por omissão; escuro opcional por `[data-theme="dark"]`. Ambos são suportados e obrigatórios nas verificações de contraste. Nunca remover o tema escuro com base nas recomendações genéricas antigas.
 
-### Spacing Variables
+| Token `--edu-*` | Claro | Escuro |
+|---|---|---|
+| `brand` | `#0d9488` | `#2dd4bf` |
+| `primary` | `#0f766e` | `#2dd4bf` |
+| `primary-hover` | `#115e59` | `#5eead4` |
+| `on-primary` | `#ffffff` | `#062521` |
+| `accent` | `#b45309` | `#f59e0b` |
+| `accent-hover` | `#92400e` | `#fbbf24` |
+| `on-accent` | `#ffffff` | `#0b1f1d` |
+| `background` | `#f0fdfa` | `#0b1f1d` |
+| `surface` | `#ffffff` | `#122a28` |
+| `surface-raised` | `#ffffff` | `#17332f` |
+| `foreground` | `#134e4a` | `#e6f5f2` |
+| `muted` | `#e8f1f4` | `#17332f` |
+| `muted-foreground` | `#4b6360` | `#9db5b1` |
+| `border` | `#cce9e4` | `#1f3f3b` |
+| `border-strong` | `#6e9a94` | `#608b84` |
+| `ring` | `#0d9488` | `#2dd4bf` |
+| `success` | `#15803d` | `#4ade80` |
+| `success-surface` | `#dcfce7` | `#16321f` |
+| `warning` | `#b45309` | `#fbbf24` |
+| `warning-surface` | `#fef3c7` | `#33260c` |
+| `destructive` | `#b91c1c` | `#f87171` |
+| `destructive-surface` | `#fee2e2` | `#3a1a1a` |
+| `on-status` | `#ffffff` | `#0b1f1d` |
 
-*Density: 7/10 — Standard*
+`brand` serve usos decorativos; superfícies interactivas e texto usam `primary`. Não trocar `border-strong` por `border` em campos: o primeiro tem contraste funcional. Consumir aliases semânticos Tailwind (`bg-surface`, `text-foreground`, `border-input`); hexadecimais permanecem na definição dos tokens. No EduMoz, `accent` significa CTA âmbar; o hover de menus usa `muted`, não o `accent` do shadcn original.
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+## Componentes e layout
 
-### Shadow Depths
+Reutilizar `Button`, `Input`, `Card`, `Badge`, `FormModal`, `DataTable` e os restantes primitivos locais. Não reinstalar componentes por cima das adaptações sem preservar tokens, foco, acessibilidade e dimensões. Estado de leitura, pendente, sucesso, erro e vazio deve ser perceptível.
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+- Alvos de toque mínimos de 44×44px; campos principais com 48px.
+- Ritmo de espaçamento baseado em 4/8px; contentores e breakpoints seguem os componentes existentes.
+- Bordas, raios e sombras usam tokens locais, sem transformar cartões de leitura em elementos clicáveis.
+- Formulários com labels visíveis, ajuda e erros associados ao campo; permitir navegação por teclado e retorno previsível.
+- Grelhas extensas podem ter scroll interno próprio; não criar scroll horizontal da página em telemóvel.
+- Impressos mantêm finalidade, campos e assinaturas da origem, com identidade da escola activa e revisão própria de paginação.
 
----
+## Movimento e acessibilidade
 
-## Component Specs
+Micro-interacções discretas, tipicamente 150–300ms, sem deslocamento de layout. Não introduzir GSAP nem overlays de transição só porque constavam de um template. Respeitar `prefers-reduced-motion`. Foco visível, rótulos acessíveis para ícones, semântica HTML e mensagens compreensíveis. Contraste mínimo de 4.5:1 para texto normal e 3:1 para texto grande e controlos.
 
-### Buttons
+## Verificação por entrega
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #D97706;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #0D9488;
-  border: 2px solid #0D9488;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #F0FDFA;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #0D9488;
-  outline: none;
-  box-shadow: 0 0 0 3px #0D948820;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Soft UI Evolution
-
-**Keywords:** Evolved soft UI, better contrast, modern aesthetics, subtle depth, accessibility-focused, improved shadows, hybrid
-
-**Best For:** Modern enterprise apps, SaaS platforms, health/wellness, modern business tools, professional, hybrid
-
-**Key Effects:** Improved shadows (softer than flat, clearer than neumorphism), modern (200-300ms), focus visible, WCAG AA/AAA
-
-### Page Pattern
-
-**Pattern Name:** Real-Time / Operations Landing
-
-- **Conversion Strategy:** For ops/security/iot products. Demo or sandbox link. Trust signals.
-- **CTA Placement:** Primary CTA in nav + After metrics
-- **Section Order:** 1. Hero (product + live preview or status), 2. Key metrics/indicators, 3. How it works, 4. CTA (Start trial / Contact)
-
----
-
-## Motion
-
-**Page Transition** (Standard) — Trigger: route change | Duration: 400-600ms | Easing: `power2.inOut`
-
-```js
-const tl = gsap.timeline(); tl.to('.transition-overlay', { yPercent: 0, duration: 0.4, ease: 'power2.inOut' }).call(navigate).to('.transition-overlay', { yPercent: -100, duration: 0.4, ease: 'power2.inOut', delay: 0.1 });
-```
-
-**Framework notes:** Keep the overlay element mounted at the layout root (outside the page component) so it survives the route swap
-
-- ✅ Show a lightweight loading indicator if the destination route's data fetch outlasts the overlay
-- ❌ Don't tie the overlay's reveal directly to data-fetch completion without a max-wait timeout; a slow API stalls the whole transition
-- ⚡ Prefer CSS transform (yPercent) over top/left to keep the overlay animation on the compositor thread
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Dark modes
-- ❌ Complex jargon
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+Rever claro/escuro, pt-MZ/en, teclado, labels e erros; dimensões móveis e desktop; nenhuma informação comunicada apenas pela cor; sem dados da escola errada; impressos/PDF verificados separadamente. A consolidação de 2026-10-27 alterou apenas documentação: CSS, fontes e componentes foram preservados.

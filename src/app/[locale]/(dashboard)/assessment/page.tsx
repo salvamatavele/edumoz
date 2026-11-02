@@ -1,3 +1,4 @@
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -5,8 +6,7 @@ import { listAssessmentSchemeOptions, listAssessmentSchemes } from "@/features/a
 import { listTerms } from "@/features/academic/data/term-results";
 import { CloseTermSection } from "@/features/academic/ui/close-term-section";
 import { AssessmentSchemeSection } from "@/features/academic/ui/settings/assessment-scheme-section";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
-import { redirect } from "@/i18n/navigation";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -41,24 +41,20 @@ export default async function AssessmentPage({ params }: PageProps<"/[locale]/as
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  const canViewSchemes = hasPermission(context, "assessment-schemes", "view");
+  const canViewTerms = hasPermission(context, "term-closing", "view");
+  if (!canViewSchemes && !canViewTerms) {
+    return <AccessDenied message={tCommon("forbidden")} />;
   }
 
   const { schoolId } = session;
 
   const [schemes, options, terms] = await Promise.all([
-    listAssessmentSchemes(schoolId),
-    listAssessmentSchemeOptions(schoolId),
-    listTerms(schoolId),
+    canViewSchemes ? listAssessmentSchemes(schoolId) : Promise.resolve({ rows: [], academicYear: null }),
+    canViewSchemes ? listAssessmentSchemeOptions(schoolId) : Promise.resolve(null),
+    canViewTerms ? listTerms(schoolId) : Promise.resolve([]),
   ]);
 
   return (
@@ -68,9 +64,9 @@ export default async function AssessmentPage({ params }: PageProps<"/[locale]/as
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <AssessmentSchemeSection rows={schemes.rows} academicYear={schemes.academicYear} options={options} />
+      {canViewSchemes && options ? <AssessmentSchemeSection canCreate={hasPermission(context, "assessment-schemes", "create")} rows={schemes.rows} academicYear={schemes.academicYear} options={options} /> : null}
 
-      <CloseTermSection terms={terms} />
+      {canViewTerms ? <CloseTermSection terms={terms} canClose={hasPermission(context, "term-closing", "edit")} /> : null}
     </div>
   );
 }

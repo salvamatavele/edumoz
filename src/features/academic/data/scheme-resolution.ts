@@ -1,7 +1,7 @@
 import type { AssessmentSchemeDefinition } from "@/features/academic/domain/assessment";
 import { resolveApplicableScheme, type SchemeScope } from "@/features/academic/domain/grade-engine";
 import { toDecimal } from "@/features/shared/domain/numeric";
-import { getTenantDb } from "@/lib/db/tenant";
+import { getTenantDb, type TenantDb } from "@/lib/db/tenant";
 
 /**
  * Resolução do esquema aplicável — partilhada entre a grelha de lançamento
@@ -75,8 +75,7 @@ export interface ResolvedScheme {
 
 /** Todos os esquemas de avaliação do ano lectivo, prontos para `pickScheme` resolver várias
  * combinações classe+disciplina sem uma consulta por combinação. */
-export async function listSchemesForYear(schoolId: string, academicYearId: string): Promise<readonly SchemeCandidateRow[]> {
-  const db = getTenantDb(schoolId);
+export async function listSchemesForYear(schoolId: string, academicYearId: string, db: Pick<TenantDb, "assessmentScheme"> = getTenantDb(schoolId)): Promise<readonly SchemeCandidateRow[]> {
 
   return db.assessmentScheme.findMany({
     where: { academicYearId },

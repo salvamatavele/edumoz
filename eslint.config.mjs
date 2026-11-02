@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-production/**",
+    ".local/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
@@ -36,6 +38,21 @@ const eslintConfig = defineConfig([
       "src/lib/auth/**",
       "src/features/identity/data/sign-in.ts",
       "src/features/identity/data/platform-schools.ts",
+      // Authorized global identity boundaries: membership-scoped reads and local status only.
+      "src/features/identity/data/school-users.ts",
+      "src/features/identity/data/school-staff.ts",
+      "src/features/identity/data/school-user-status.ts",
+      "src/features/identity/data/school-user-removal.ts",
+      "src/features/identity/data/assign-permission-role.ts",
+      "src/features/identity/data/create-permission-role.ts",
+      "src/features/identity/data/permission-role-management.ts",
+      "src/features/identity/data/install-system-roles.ts",
+      "src/features/identity/data/membership-permission-roles.ts",
+      "src/features/identity/data/membership-permission-overrides.ts",
+      "src/features/identity/data/permission-role-member-counts.ts",
+      "src/features/identity/data/create-school-user.ts",
+      "src/features/identity/data/edit-school-user.ts",
+      "src/features/identity/data/professional-link.ts",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [

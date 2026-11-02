@@ -47,6 +47,7 @@ import { EntitySection } from "@/features/academic/ui/settings/entity-section";
 import { DayOfWeek, RoomKind, SchoolCycle, Shift, SubjectScope } from "@/types";
 
 interface AcademicStructurePanelProps {
+  readonly canCreate?: boolean;
   readonly gradeLevels: readonly GradeLevelRow[];
   readonly sections: readonly SectionRow[];
   readonly studyPaths: { readonly rows: readonly StudyPathRow[]; readonly academicYear: string | null };
@@ -62,6 +63,7 @@ interface AcademicStructurePanelProps {
 }
 
 export function AcademicStructurePanel({
+  canCreate = true,
   gradeLevels,
   sections,
   studyPaths,
@@ -407,6 +409,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="gradeLevels">
       <EntitySection<GradeLevelRow, CreateGradeLevelInput>
+        canCreate={canCreate}
         subtitle={t("gradeLevels.subtitle")}
         tableLabel={t("gradeLevels.tableLabel")}
         columns={gradeLevelColumns}
@@ -427,6 +430,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="sections">
       <EntitySection<SectionRow, CreateSectionInput>
+        canCreate={canCreate}
         subtitle={t("sections.subtitle")}
         tableLabel={t("sections.tableLabel")}
         columns={sectionColumns}
@@ -445,6 +449,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="studyPaths">
       <EntitySection<StudyPathRow, CreateStudyPathInput>
+        canCreate={canCreate}
         subtitle={t("studyPaths.subtitle")}
         tableLabel={t("studyPaths.tableLabel")}
         columns={studyPathColumns}
@@ -470,6 +475,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="subjects">
       <EntitySection<SubjectRow, CreateSubjectInput>
+        canCreate={canCreate}
         subtitle={t("subjects.subtitle")}
         tableLabel={t("subjects.tableLabel")}
         columns={subjectColumns}
@@ -488,6 +494,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="curriculumSubjects">
       <EntitySection<CurriculumSubjectRow, CreateCurriculumSubjectInput>
+        canCreate={canCreate}
         subtitle={t("curriculumSubjects.subtitle")}
         tableLabel={t("curriculumSubjects.tableLabel")}
         columns={curriculumSubjectColumns}
@@ -522,6 +529,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="classGroups">
       <EntitySection<ClassGroupRow, CreateClassGroupInput>
+        canCreate={canCreate}
         subtitle={t("classGroups.subtitle")}
         tableLabel={t("classGroups.tableLabel")}
         columns={classGroupColumns}
@@ -541,6 +549,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="rooms">
       <EntitySection<RoomRow, CreateRoomInput>
+        canCreate={canCreate}
         subtitle={t("rooms.subtitle")}
         tableLabel={t("rooms.tableLabel")}
         columns={roomColumns}
@@ -559,6 +568,7 @@ export function AcademicStructurePanel({
 
       <TabsContent value="timeSlots">
       <EntitySection<TimeSlotRow, CreateTimeSlotInput>
+        canCreate={canCreate}
         subtitle={t("timeSlots.subtitle")}
         tableLabel={t("timeSlots.tableLabel")}
         columns={timeSlotColumns}

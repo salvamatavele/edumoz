@@ -1,10 +1,11 @@
+import { notFound } from "next/navigation";
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { listAssignableStaff, listPermissionCatalog, listPermissionRoles } from "@/features/identity/data/permission-roles";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
+import { assignableStaffQuerySchema, listAssignableStaff, listPermissionCatalog, listPermissionRoles } from "@/features/identity/data/permission-roles";
+import { isUnrestrictedSchoolAdministrator, toSessionContext } from "@/features/identity/domain/access";
 import { PermissionRolesSection } from "@/features/identity/ui/permission-roles-section";
-import { redirect } from "@/i18n/navigation";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -27,7 +28,7 @@ export async function generateMetadata({
  * pagamento continuam por construir (ver openspec/changes/academic-configuration/design.md,
  * Non-Goals).
  */
-export default async function SettingsPage({ params }: PageProps<"/[locale]/settings">) {
+export default async function SettingsPage({ params, searchParams }: PageProps<"/[locale]/settings">) {
   const { locale } = await params;
   setRequestLocale(locale);
 
@@ -45,24 +46,20 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  if (!isUnrestrictedSchoolAdministrator(context)) {
+    return <AccessDenied message={t("errors.forbidden")} />;
   }
 
   const { schoolId } = session;
+  const query = assignableStaffQuerySchema.safeParse(await searchParams);
+  if (!query.success) notFound();
 
   const [roles, catalog, staff] = await Promise.all([
     listPermissionRoles(schoolId),
     listPermissionCatalog(schoolId),
-    listAssignableStaff(schoolId),
+    listAssignableStaff(schoolId, session.user.id, query.data),
   ]);
 
   return (
@@ -72,7 +69,7 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <PermissionRolesSection roles={roles} catalog={catalog} staff={staff} />
+      <PermissionRolesSection schoolId={session.schoolId} roles={roles} catalog={catalog} staff={staff.rows} staffPagination={staff} />
 
       <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center text-muted-foreground">
         {t("comingSoon")}

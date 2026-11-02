@@ -266,4 +266,47 @@ describe("placeScheduleEntry", () => {
       expect(result.warning).toBeUndefined();
     }
   });
+  it("serializes concurrent placements sharing a student even with different rooms and teachers", async () => {
+    mockAuth.mockResolvedValue(sessionAs("SCHOOL_MANAGER"));
+    const slot = await prisma.timeSlot.create({ data: { schoolId, academicYearId, shift: "MORNING", dayOfWeek: "TUESDAY", startTime: "07:00", endTime: "08:00", order: 1 } });
+    const scheduling = await import("@/features/academic/data/scheduling");
+    const original = scheduling.listTeachingGroupMemberships;
+    let arrivals = 0;
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+    const spy = vi.spyOn(scheduling, "listTeachingGroupMemberships").mockImplementation(async (...args) => {
+      const result = await original(...args);
+      arrivals++;
+      if (arrivals === 2) release();
+      await barrier;
+      return result;
+    });
+    try {
+      const results = await Promise.all([
+        placeScheduleEntry({ teachingGroupId: groupAId, roomId, timeSlotId: slot.id }),
+        placeScheduleEntry({ teachingGroupId: groupBId, roomId: roomOtherId, timeSlotId: slot.id }),
+      ]);
+      expect(results.filter((result) => result.status === "success")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "conflict")).toHaveLength(1);
+      expect(await prisma.scheduleEntry.count({ where: { schoolId, timeSlotId: slot.id } })).toBe(1);
+    } finally { spy.mockRestore(); }
+  });
+
+  it.each(["inactive-teacher", "inactive-room", "missing-entry"])("refuses %s without writing a schedule or audit", async (scenario) => {
+    mockAuth.mockResolvedValue(sessionAs("SCHOOL_MANAGER"));
+    const slot = await prisma.timeSlot.create({ data: { schoolId, academicYearId, shift: "MORNING", dayOfWeek: "WEDNESDAY", startTime: `0${7 + ["inactive-teacher", "inactive-room", "missing-entry"].indexOf(scenario)}:00`, endTime: "10:00", order: 1 } });
+    const audits = await prisma.auditLog.count({ where: { schoolId } });
+    try {
+      if (scenario === "inactive-teacher") await prisma.teacher.update({ where: { id: teacherAId }, data: { isActive: false } });
+      if (scenario === "inactive-room") await prisma.room.update({ where: { id: roomId }, data: { isActive: false } });
+      const result = await placeScheduleEntry({ teachingGroupId: groupAId, roomId, timeSlotId: slot.id, ...(scenario === "missing-entry" ? { id: "nonexistent-entry" } : {}) });
+      expect(result.status).toBe("error");
+      expect(await prisma.scheduleEntry.count({ where: { schoolId, timeSlotId: slot.id } })).toBe(0);
+      expect(await prisma.auditLog.count({ where: { schoolId } })).toBe(audits);
+    } finally {
+      await prisma.teacher.update({ where: { id: teacherAId }, data: { isActive: true } });
+      await prisma.room.update({ where: { id: roomId }, data: { isActive: true } });
+    }
+  });
+
 });

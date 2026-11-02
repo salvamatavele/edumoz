@@ -1,5 +1,5 @@
 import type { GradeEntry } from "@/features/academic/domain/assessment";
-import { getTenantDb } from "@/lib/db/tenant";
+import { getTenantDb, type TenantDb } from "@/lib/db/tenant";
 
 import { listSchemesForYear, pickScheme } from "./scheme-resolution";
 
@@ -49,8 +49,7 @@ export interface TermClosingPlan {
  * trimestre para cada uma — cruzando `Assessment` (que sabe a disciplina, via
  * `teachingGroup.subjectId`) com `Grade` (que sabe a matrícula).
  */
-export async function getTermClosingPlan(schoolId: string, termId: string): Promise<TermClosingPlan | null> {
-  const db = getTenantDb(schoolId);
+export async function getTermClosingPlan(schoolId: string, termId: string, db: Pick<TenantDb, "term" | "enrollment" | "grade"> = getTenantDb(schoolId)): Promise<TermClosingPlan | null> {
 
   const term = await db.term.findUnique({
     where: { id: termId },

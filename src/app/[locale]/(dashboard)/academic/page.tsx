@@ -1,3 +1,4 @@
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -12,8 +13,7 @@ import {
 } from "@/features/academic/data/academic-structure";
 import { listRooms, listTimeSlots } from "@/features/academic/data/scheduling";
 import { AcademicStructurePanel } from "@/features/academic/ui/settings/academic-structure-panel";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
-import { redirect } from "@/i18n/navigation";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -50,16 +50,10 @@ export default async function AcademicPage({ params }: PageProps<"/[locale]/acad
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  if (!hasPermission(context, "academic-structure", "view")) {
+    return <AccessDenied message={tCommon("forbidden")} />;
   }
 
   const { schoolId } = session;
@@ -84,7 +78,7 @@ export default async function AcademicPage({ params }: PageProps<"/[locale]/acad
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <AcademicStructurePanel
+      <AcademicStructurePanel canCreate={hasPermission(context, "academic-structure", "create")}
         gradeLevels={gradeLevels}
         sections={sections}
         studyPaths={studyPaths}

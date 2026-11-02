@@ -6,6 +6,9 @@
     "description": "Plataforma de gestão escolar que reúne alunos, turmas, notas, presenças e propinas num único lugar."
   },
   "common": {
+    "notFoundTitle": "Página não encontrada",
+    "notFoundDescription": "Não foi possível encontrar esta página. Verifique o endereço e tente novamente.",
+    "returnHome": "Voltar ao início",
     "skipToContent": "Saltar para o conteúdo principal",
     "requestDemo": "Pedir demonstração",
     "homeAriaLabel": "EduMoz, página inicial",
@@ -39,7 +42,11 @@
     "reportCards": "Pautas",
     "timetables": "Horários",
     "myTimetable": "O meu horário",
-    "finance": "Finanças"
+    "finance": "Finanças",
+    "users": "Utilizadores",
+    "password": "Palavra-passe",
+    "staff": "Pessoal",
+    "sessions": "Sessões"
   },
   "home": {
     "badge": "Feito para escolas moçambicanas",
@@ -146,7 +153,8 @@
     "genericError": "Não foi possível guardar. Tente de novo.",
     "optional": "(opcional)",
     "showPassword": "Mostrar palavra-passe",
-    "hidePassword": "Esconder palavra-passe"
+    "hidePassword": "Esconder palavra-passe",
+    "endBeforeStart": "A hora de fim deve ser posterior à hora de início."
   },
   "auth": {
     "signIn": "Entrar",
@@ -155,14 +163,14 @@
     "signInSubtitle": "Aceda com a conta da sua escola.",
     "withGoogle": "Continuar com Google",
     "or": "ou",
-    "identifier": "E-mail ou telemóvel",
-    "identifierHint": "Alunos e encarregados de educação podem usar o número de telemóvel.",
+    "identifier": "Código de entrada, email ou telemóvel",
+    "identifierHint": "Use o código de entrada entregue pela escola, o email ou o número de telemóvel da conta.",
     "password": "Palavra-passe",
     "submit": "Entrar",
     "submitting": "A entrar…",
     "signOut": "Terminar sessão",
     "failed": "Não foi possível entrar. Verifique os dados e tente de novo.",
-    "noAccess": "Esta conta não tem acesso a nenhuma escola. Peça um convite à direcção.",
+    "noAccess": "Sem acesso a esta página na escola seleccionada. Escolha uma escola autorizada ou contacte a direcção.",
     "school": "Escola",
     "changeSchool": "Mudar de escola"
   },
@@ -283,7 +291,7 @@
     "date": "Data",
     "emptySchedule": "Não tem aulas neste dia.",
     "headTeacherView": "Turma que dirige",
-    "headTeacherReadOnlyNotice": "Está a ver esta disciplina por dirigir a turma — só quem lecciona pode marcar presenças.",
+    "headTeacherReadOnlyNotice": "Modo de consulta. Só quem lecciona esta disciplina pode marcar presenças.",
     "sessionStatus": {
       "submitted": "Submetida",
       "draft": "Por acabar",
@@ -312,7 +320,9 @@
     "errors": {
       "forbidden": "Não tem permissão para esta acção",
       "invalid": "Os dados enviados não são válidos",
-      "conflict": "Esta sessão já foi alterada por outra pessoa. Tente de novo."
+      "conflict": "Esta sessão já foi alterada por outra pessoa. Tente de novo.",
+      "submitted": "Esta sessão já foi submetida. Reabra-a antes de corrigir.",
+      "alreadyOpen": "Esta sessão já está aberta."
     }
   },
   "settings": {
@@ -333,7 +343,7 @@
       "name": "Nome",
       "description": "Descrição",
       "permissionCount": "Permissões",
-      "memberCount": "Membros"
+      "memberCount": "Associações"
     },
     "create": {
       "trigger": "Criar papel",
@@ -355,7 +365,11 @@
       "report-cards": "Pautas",
       "academic-structure": "Estrutura académica",
       "teaching-staff": "Professores",
-      "assessment-schemes": "Esquemas de avaliação"
+      "assessment-schemes": "Esquemas de avaliação",
+      "finance": "Finanças",
+      "scheduling": "Horários",
+      "users": "Utilizadores",
+      "school-staff": "Pessoal"
     },
     "actions": {
       "view": "Ver",
@@ -364,16 +378,185 @@
       "delete": "Apagar"
     },
     "staffTitle": "Atribuir papéis",
-    "staffSubtitle": "Gestores da escola — sem papel atribuído, mantêm acesso total.",
-    "staffEmpty": "Ainda não há gestores nesta escola.",
+    "staffSubtitle": "Associações de gestores e docentes. Os perfis complementam a função e respeitam os vínculos próprios.",
+    "staffEmpty": "Não foram encontradas associações de pessoal para esta pesquisa.",
     "restricted": "Papel restrito",
     "unrestrictedBadge": "Acesso total",
     "unrestrictedOption": "Acesso total (sem restrição)",
     "errors": {
-      "name": "Indique um nome para o papel",
+      "name": "Indique um nome com 3 a 120 caracteres e pelo menos uma letra ou número.",
       "membershipNotFound": "Este gestor já não existe nesta escola",
       "roleNotFound": "Este papel já não existe",
-      "assignFailed": "Não foi possível atribuir o papel"
+      "assignFailed": "Não foi possível atribuir o papel",
+      "duplicateName": "Já existe um papel com este nome nesta escola.",
+      "requestChanged": "Este pedido já foi gravado com outros dados. Feche e consulte a lista antes de criar outro papel.",
+      "invalid": "Reveja os dados do papel.",
+      "createFailed": "Não foi possível confirmar a criação. Pode repetir com os mesmos dados ou fechar e consultar a lista.",
+      "notFound": "O papel não está disponível nesta escola.",
+      "conflict": "O papel foi alterado. Feche e reveja os dados antes de guardar.",
+      "protectedRole": "Perfis de sistema não podem ser apagados.",
+      "roleInUse": "Este papel tem associações actuais ou históricas e não pode ser apagado.",
+      "operationFailed": "Não foi possível confirmar a operação. Tente novamente."
+    },
+    "manage": {
+      "actions": "Acções",
+      "system": "Sistema",
+      "systemNote": "Perfil de sistema: o nome e as permissões podem ser ajustados; não pode ser apagado.",
+      "impact": "{count, plural, =0 {Este papel ainda não tem associações.} one {Este papel tem # associação actual ou histórica.} other {Este papel tem # associações actuais ou históricas.}}",
+      "loading": "A carregar o papel…",
+      "noData": "Não foi possível carregar o papel.",
+      "uncertain": "A resposta não chegou. Feche e actualize a lista para verificar o resultado antes de repetir.",
+      "edit": {
+        "button": "Editar",
+        "named": "Editar papel {name}",
+        "title": "Editar papel",
+        "description": "Reveja o nome, a descrição e os acessos concedidos antes de guardar.",
+        "confirm": "Guardar alterações"
+      },
+      "delete": {
+        "button": "Apagar",
+        "named": "Apagar papel {name}",
+        "title": "Apagar papel?",
+        "description": "Confirme o nome do papel. Só pode apagar um papel personalizado sem associações.",
+        "confirm": "Confirmar eliminação",
+        "effect": "O papel e as suas concessões serão apagados. O registo de auditoria é preservado."
+      }
+    },
+    "levels": {
+      "named": "Acesso: {name}",
+      "none": "Sem acesso",
+      "read": "Consultar",
+      "write": "Alterar",
+      "custom": "Detalhado",
+      "details": "Ajustes detalhados",
+      "pendingResource": "As permissões administrativas deste recurso ainda não estão disponíveis. O trabalho docente próprio mantém as suas regras.",
+      "pending": "Integração pendente",
+      "legacyPending": "Configuração antiga preservada; função ainda indisponível",
+      "consumerNotice": "Só estão disponíveis as acções já suportadas. As configurações anteriores das restantes ficam guardadas e não activam funções indisponíveis."
+    },
+    "systemRoles": {
+      "trigger": "Preparar perfis de sistema",
+      "title": "Preparar os nove perfis de sistema",
+      "description": "Acrescenta os perfis que faltam nesta escola. Preserva os ajustes dos perfis existentes e não atribui pessoas.",
+      "coverage": "Os perfis acompanham os módulos disponíveis. Algumas funções dependem das próximas entregas; os acessos próprios continuam limitados à pessoa ou turma correspondente.",
+      "confirm": "Preparar perfis",
+      "failed": "Não foi possível confirmar a preparação. Pode repetir: os ajustes existentes serão preservados.",
+      "profiles": {
+        "direcao": {
+          "name": "Direcção",
+          "description": "Acesso de gestão a todos os módulos da escola."
+        },
+        "diretor_turma": {
+          "name": "Director de Turma",
+          "description": "Professor com poderes acrescidos na sua turma: consolida pautas e monitoriza faltas e aproveitamento."
+        },
+        "professor": {
+          "name": "Professor",
+          "description": "Vê as suas turmas. Lança notas, marca faltas e regista sumários."
+        },
+        "secretaria": {
+          "name": "Secretaria",
+          "description": "Cadastro de alunos e encarregados, matrículas e emissão de documentos."
+        },
+        "aluno": {
+          "name": "Aluno",
+          "description": "Vê o seu horário, as suas notas e a sua situação escolar."
+        },
+        "encarregado": {
+          "name": "Encarregado de Educação",
+          "description": "Vê o horário, as notas e as faltas do seu educando."
+        },
+        "coordenador_extracurricular": {
+          "name": "Coordenador das Extracurriculares",
+          "description": "Gere as actividades, as turmas, as matrículas e a caixa das extracurriculares. Não toca no percurso académico."
+        },
+        "professor_extracurricular": {
+          "name": "Professor de Actividade",
+          "description": "Dá uma actividade extracurricular. Vê só as suas turmas: regista as aulas, as presenças e as avaliações delas."
+        },
+        "portaria": {
+          "name": "Portaria e Acessos",
+          "description": "Controlo de entradas e presenças na portaria."
+        }
+      }
+    },
+    "assignment": {
+      "named": "Gerir perfis de {name}",
+      "trigger": "Gerir perfis",
+      "title": "Perfis desta associação escolar",
+      "description": "Confirme a pessoa, a função e os perfis antes de guardar. A identidade e os vínculos profissionais são preservados.",
+      "loadFailed": "Não foi possível carregar os perfis. Feche e tente novamente.",
+      "searchFailed": "Não foi possível procurar perfis. As escolhas actuais foram preservadas.",
+      "uncertain": "A resposta não foi confirmada. Feche e consulte o estado actual antes de alterar novamente.",
+      "mode": "Tipo de acesso",
+      "configured": "Perfis seleccionados",
+      "legacy": "Acesso total da escola",
+      "legacyWarning": "Esta escolha remove as restrições administrativas desta associação e permite gerir todos os recursos disponíveis da escola.",
+      "ownership": "Os perfis administrativos não substituem os vínculos às turmas, aos docentes ou aos educandos.",
+      "selectedCount": "{count, plural, one {# perfil seleccionado} other {# perfis seleccionados}} · máximo {maximum}",
+      "selected": "Perfis seleccionados nesta associação",
+      "remove": "Retirar {name} da selecção",
+      "empty": "Sem perfis administrativos seleccionados. Esta configuração não repõe o acesso total.",
+      "search": "Procurar perfis",
+      "searching": "A procurar…",
+      "searchButton": "Procurar",
+      "available": "Perfis disponíveis",
+      "select": "Seleccionar {name}",
+      "grantCount": "{count, plural, =0 {Sem permissões guardadas} one {# permissão guardada} other {# permissões guardadas}}",
+      "noMatches": "Não foram encontrados perfis.",
+      "pagination": "Páginas de perfis disponíveis",
+      "previous": "Anterior",
+      "next": "Seguinte",
+      "page": "Página {page} de {total}",
+      "loading": "A carregar a associação…",
+      "unavailable": "Não foi possível obter uma associação editável.",
+      "restoreLegacy": "Repor acesso total",
+      "save": "Guardar atribuições",
+      "roleCount": "{count, plural, =0 {Sem perfis administrativos} one {# perfil} other {# perfis}}",
+      "currentUser": "A sua conta — gestão própria protegida",
+      "staffSearch": "Procurar gestores ou docentes",
+      "staffPagination": "Páginas de associações de pessoal",
+      "unnamed": "Conta sem nome · {code}",
+      "suspended": "Associação suspensa. Os perfis são guardados sem repor o acesso desta associação.",
+      "suspendedBadge": "Suspensa",
+      "disabledAccount": "A conta está inactiva. A atribuição de perfis não a activa.",
+      "initialAccount": "A primeira alteração da palavra-passe continua obrigatória. A atribuição de perfis não remove esta protecção.",
+      "legacyOverridesWarning": "As excepções desta conta são preservadas. A herança legada não anula negações nem repõe a gestão irrestrita enquanto houver excepções activas.",
+      "restoreLegacyInheritance": "Repor herança legada"
+    },
+    "overrides": {
+      "trigger": "Excepções",
+      "named": "Gerir excepções de {name}",
+      "title": "Excepções desta associação escolar",
+      "description": "Confirme a pessoa e compare a herança com o acesso efectivo antes de guardar.",
+      "unnamed": "Conta sem nome · {code}",
+      "suspended": "Associação suspensa. As excepções ficam preparadas sem activar o acesso; só participam na autorização após activação.",
+      "initialAccount": "A credencial inicial ainda exige substituição. Estas escolhas não dispensam a activação segura da conta.",
+      "disabledAccount": "A conta está inactiva. Guardar excepções não a reactiva.",
+      "ownership": "Controla acessos administrativos desta escola. Não altera o trabalho docente nas próprias turmas nem o acesso familiar aos próprios educandos. Uma negação noutra associação activa também prevalece.",
+      "legacyWarning": "Qualquer excepção activa retira a condição de gestor irrestrito das políticas, mesmo quando repete a herança. Os restantes acessos herdados são preservados.",
+      "legacyRestricted": "Gestão legada com excepções",
+      "badge": "{count, plural, one {# excepção} other {# excepções}}",
+      "search": "Procurar recurso",
+      "count": "{count, plural, =0 {Sem excepções nesta associação} one {# excepção nesta associação} other {# excepções nesta associação}}",
+      "level": "Nível de {resource}",
+      "inherit": "Herdar dos perfis",
+      "deny": "Negar",
+      "allow": "Permitir",
+      "details": "Consultar e ajustar cada acção",
+      "inherited": "Herdado: {value}",
+      "choice": "Excepção de {resource} — {action}",
+      "effective": "Resultado previsto: {value}",
+      "permitted": "Permitido",
+      "denied": "Negado",
+      "otherDenial": "Outra associação activa nega esta acção. Permitir aqui não supera essa negação.",
+      "reason": "Motivo de {resource} — {action} (opcional)",
+      "noMatches": "Nenhum recurso corresponde à procura.",
+      "loading": "A carregar herança e excepções…",
+      "unavailable": "Não foi possível carregar esta associação.",
+      "loadFailed": "Não foi possível carregar as excepções. Feche e tente novamente.",
+      "uncertain": "Não foi possível confirmar a gravação. Feche para actualizar o estado antes de voltar a alterar.",
+      "save": "Guardar excepções"
     }
   },
   "academic": {
@@ -873,7 +1056,7 @@
       "tableTitle": "Pagamentos desta factura",
       "empty": "Esta factura ainda não tem nenhum pagamento.",
       "fields": {
-        "amount": "Valor (MT)",
+        "amount": "Valor ({currency})",
         "method": "Método",
         "provider": "Operador",
         "payerPhone": "Número do pagador"
@@ -930,7 +1113,13 @@
         "nothingOwed": "Esta factura já não tem nenhum valor em dívida",
         "paymentNotFound": "Pagamento não encontrado",
         "cannotReverse": "Só é possível reverter um pagamento confirmado",
-        "gatewayFailure": "Não foi possível contactar o operador. O pedido já ficou registado — tente confirmar mais tarde."
+        "gatewayFailure": "Não foi possível contactar o operador. O pedido já ficou registado — tente confirmar mais tarde.",
+        "idempotencyKey": "Intenção de pagamento inválida",
+        "intentConflict": "Esta intenção já foi usada com outros dados. Confirme os pagamentos existentes antes de iniciar outra.",
+        "paymentInProgress": "Já existe uma tentativa móvel pendente nesta factura. Consulte o seu estado antes de iniciar outra.",
+        "unsupportedCurrency": "Esta moeda não é suportada pelo operador configurado.",
+        "providerMismatch": "A referência devolvida pelo operador não corresponde ao pagamento.",
+        "retrySameIntent": "Não foi possível confirmar a resposta. Tente novamente sem alterar os dados."
       }
     },
     "receipt": {
@@ -938,7 +1127,7 @@
       "printTrigger": "Imprimir",
       "studentLabel": "Aluno",
       "invoiceLabel": "Factura",
-      "amountLabel": "Valor",
+      "amountLabel": "Valor ({currency})",
       "methodLabel": "Método",
       "dateLabel": "Data",
       "statusLabel": "Estado",
@@ -1149,7 +1338,9 @@
     "saving": "A guardar…",
     "save": "Guardar",
     "errors": {
-      "invalid": "Os dados enviados não são válidos"
+      "invalid": "Os dados enviados não são válidos",
+      "termClosed": "O trimestre está fechado. Peça uma reabertura autorizada antes de alterar notas ou avaliações.",
+      "outOfRange": "Uma nota excede o valor máximo da avaliação. Nenhuma alteração foi guardada."
     },
     "create": {
       "trigger": "Nova avaliação",
@@ -1181,7 +1372,8 @@
       "notAdmittedToExam": "Não admitido a exame",
       "belowExamMinimum": "Abaixo do mínimo exigido no exame",
       "noGradesAtAll": "Sem notas lançadas"
-    }
+    },
+    "termClosedNotice": "Trimestre fechado — as notas estão em modo de consulta. Alterações exigem reabertura autorizada."
   },
   "termClosing": {
     "title": "Fecho de trimestre",
@@ -1193,15 +1385,24 @@
     },
     "trigger": "Fechar",
     "confirmTitle": "Fechar {term}?",
-    "confirmDescription": "Esta acção calcula e grava os resultados de todas as disciplinas e alunos deste trimestre. Não é possível reabrir nesta fase — confirme que todas as notas estão lançadas.",
+    "confirmDescription": "Esta acção calcula e grava os resultados de todas as disciplinas e alunos deste trimestre. Alterações posteriores exigem reabertura autorizada com motivo.",
     "cancel": "Cancelar",
     "closing": "A fechar…",
     "confirm": "Fechar trimestre",
     "errors": {
       "invalid": "Os dados enviados não são válidos",
       "notFound": "Trimestre não encontrado",
-      "alreadyClosed": "Este trimestre já está fechado"
-    }
+      "alreadyClosed": "Este trimestre já está fechado",
+      "reason": "Indique um motivo de 10 a 1000 caracteres",
+      "alreadyOpen": "Este trimestre já está aberto"
+    },
+    "reopenTrigger": "Reabrir",
+    "reopenTitle": "Reabrir {term}?",
+    "reopenDescription": "As pautas deixam de estar disponíveis até novo fecho. Os resultados anteriores ficam preservados na auditoria.",
+    "reasonLabel": "Motivo da reabertura",
+    "reasonHint": "Explique a correcção necessária (10 a 1000 caracteres). O motivo e a autoria ficam registados.",
+    "reopening": "A reabrir…",
+    "reopenConfirm": "Reabrir trimestre"
   },
   "reportCards": {
     "title": "Pautas",
@@ -1221,5 +1422,288 @@
     "pending": "Pendente",
     "passed": "Aprovado",
     "failed": "Reprovado"
+  },
+  "users": {
+    "title": "Utilizadores",
+    "subtitle": "Contas, perfis e acesso à escola seleccionada.",
+    "columns": {
+      "name": "Nome e códigos",
+      "contact": "Contactos",
+      "roles": "Papéis na escola",
+      "links": "Vínculos",
+      "status": "Estado",
+      "actions": "Acções"
+    },
+    "filters": {
+      "search": "Nome, contacto ou código",
+      "role": "Papel",
+      "status": "Estado",
+      "link": "Vínculo"
+    },
+    "states": {
+      "ACTIVE": "Activo",
+      "SUSPENDED": "Suspenso",
+      "DISABLED": "Conta desactivada"
+    },
+    "links": {
+      "teacher": "Docente",
+      "student": "Aluno",
+      "guardian": "Encarregado",
+      "none": "Sem ficha associada",
+      "staff": "Funcionário"
+    },
+    "anyRole": "Todos os papéis",
+    "anyStatus": "Todos os estados",
+    "anyLink": "Todos os vínculos",
+    "search": "Procurar",
+    "count": "{filtered, plural, =0 {0 resultados} one {# resultado} other {# resultados}} · {total, plural, =0 {0 contas da escola} one {# conta da escola} other {# contas da escola}}",
+    "schoolScope": "A activação e a suspensão afectam apenas esta escola.",
+    "tableLabel": "Utilizadores da escola",
+    "empty": "Nenhuma conta encontrada",
+    "emptyHint": "Ajuste os filtros ou procure por outro nome.",
+    "unnamed": "Sem nome",
+    "noCode": "Sem código de ficha",
+    "noEmail": "Sem e-mail",
+    "protected": "Conta protegida",
+    "unavailable": "Contacte a administração",
+    "suspend": "Suspender",
+    "activate": "Activar",
+    "suspendNamed": "Suspender {name}",
+    "activateNamed": "Activar {name}",
+    "confirmSuspend": "Suspender acesso à escola?",
+    "confirmActivate": "Activar acesso à escola?",
+    "confirmDescription": "Esta alteração afecta os vínculos de {name} nesta escola. Os dados e o acesso a outras escolas são preservados.",
+    "pagination": "Paginação de utilizadores",
+    "previous": "Anterior",
+    "next": "Seguinte",
+    "page": "Página {page} de {total}",
+    "errors": {
+      "forbidden": "Não tem permissão para gerir estas contas.",
+      "invalid": "Verifique os dados e tente novamente.",
+      "notFound": "Conta não encontrada nesta escola.",
+      "protectedAccount": "Esta conta é protegida e não pode ser alterada aqui.",
+      "lastManager": "Não pode suspender o último gestor com acesso total à escola.",
+      "disabledAccount": "A conta está desactivada. Contacte a administração.",
+      "creationUnavailable": "Não foi possível concluir com estes dados. Confirme a conta, os contactos e a disponibilidade da ficha docente. Não são alteradas contas já activadas ou partilhadas.",
+      "rateLimited": "Demasiadas tentativas. Aguarde 15 minutos antes de tentar novamente.",
+      "schoolChanged": "A escola da sessão mudou. Feche o formulário e confirme a escola antes de tentar novamente.",
+      "editUnavailable": "Não é possível editar esta conta por esta via. A edição escolar exige uma conta exclusiva e autorizada.",
+      "editConflict": "Os dados mudaram desde a abertura. Feche e volte a abrir para rever a versão actual antes de guardar.",
+      "linkUnavailable": "Não é possível usar esta conta ou ficha nesta operação. Confirme o papel Professor activo e uma ficha disponível desta escola.",
+      "linkConflict": "A ligação ou a ficha mudou. Feche e volte a abrir para rever a situação actual antes de confirmar.",
+      "staffLinkUnavailable": "Não é possível usar esta conta ou ficha nesta operação. Confirme um vínculo de pessoal activo e uma ficha disponível desta escola.",
+      "removalConflict": "A associação foi alterada. Feche e reveja os dados antes de retirar.",
+      "removalUnavailable": "Não foi possível confirmar a retirada. Tente novamente."
+    },
+    "create": {
+      "trigger": "Criar conta",
+      "title": "Nova conta da escola",
+      "description": "Este formulário cria uma conta nova. A associação de uma conta existente exige confirmação do titular.",
+      "name": "Nome completo",
+      "email": "Email de contacto (opcional)",
+      "phone": "Telemóvel de contacto (opcional)",
+      "phoneHint": "Número moçambicano: 84… ou +25884…. A entrada usa o código da conta.",
+      "roles": "Papéis na escola",
+      "teacherCode": "Código da ficha docente (opcional)",
+      "teacherHint": "A ficha deve pertencer a esta escola, estar livre e ter o papel Professor seleccionado.",
+      "initialHint": "O código de entrada e a palavra-passe temporária são gerados após criar. A pessoa terá 24 horas para substituir a palavra-passe antes de aceder à escola.",
+      "submit": "Criar e entregar credencial",
+      "invalid": "Verifique o nome, contactos e papéis. Seleccione Professor se indicar uma ficha docente.",
+      "transport": "Não foi possível confirmar o resultado. Consulte a lista antes de criar outra conta; repetir este pedido não recupera a credencial.",
+      "deliveryTitle": "Entregar credencial inicial",
+      "deliveryDescription": "Entregue estes dados em privado à pessoa. A palavra-passe não voltará a ser apresentada depois de fechar.",
+      "loginCode": "Código de entrada",
+      "temporaryPassword": "Palavra-passe temporária",
+      "expires": "Substituir até {date}.",
+      "deliveryWarning": "A pessoa deve entrar sempre com este código, substituir a palavra-passe e voltar a entrar. Email e telemóvel indicados são contactos; não identificam outra conta. Não partilhe a credencial por canais públicos.",
+      "done": "Concluir entrega",
+      "alreadyCreated": "Este pedido já foi concluído. A palavra-passe entregue não pode ser recuperada. Consulte a conta na lista; se ainda não foi activada, pode emitir uma nova credencial.",
+      "backToList": "Voltar à lista",
+      "reissueTrigger": "Reemitir credencial inicial",
+      "reissueTitle": "Nova credencial inicial",
+      "reissueDescription": "Emitir uma nova credencial para {name} invalida a anterior e as sessões abertas. Só é permitido antes da activação e numa conta exclusiva desta escola.",
+      "reissueSubmit": "Reemitir e entregar credencial",
+      "reissueHint": "O código de entrada mantém-se. A nova palavra-passe temporária será válida por 24 horas e deverá ser substituída antes do acesso à escola.",
+      "contactHint": "Contacto para comunicação. Esta conta entra pelo código entregue."
+    },
+    "loginCodeLabel": "Código de entrada",
+    "passwordPending": "Palavra-passe inicial por substituir",
+    "edit": {
+      "button": "Editar",
+      "named": "Editar conta de {name}",
+      "title": "Editar dados da conta",
+      "description": "Corrija o nome e os contactos de comunicação de uma conta exclusiva desta escola.",
+      "loginPreserved": "Os contactos abaixo não são verificados e não alteram o email, telefone ou código de entrada. Papéis, vínculos e credenciais são preservados.",
+      "loading": "A verificar a conta…",
+      "noData": "Feche esta janela e confirme a conta e a escola antes de tentar novamente.",
+      "save": "Guardar alterações",
+      "saved": "Dados guardados.",
+      "uncertain": "Não foi possível confirmar a gravação. Feche esta janela e consulte os dados antes de tentar novamente."
+    },
+    "teacherLink": {
+      "button": "Ficha docente",
+      "named": "Gerir ficha docente de {name}",
+      "title": "Ligação à ficha docente",
+      "description": "Confirme a ficha que corresponde a {name} nesta escola.",
+      "loading": "A verificar a ligação…",
+      "unavailable": "Feche a janela e confirme a conta e a escola antes de tentar novamente.",
+      "current": "Ficha actual",
+      "after": "Ficha após a alteração",
+      "none": "Sem ligação",
+      "operation": "Operação",
+      "link": "Ligar ou substituir ficha",
+      "unlink": "Desligar ficha",
+      "code": "Código da ficha docente",
+      "verify": "Verificar ficha",
+      "confirmLink": "Confirmar ligação",
+      "confirmUnlink": "Confirmar desligação",
+      "confirmHint": "Confira o nome e o código. A conta passará a usar esta ficha no acesso docente desta escola.",
+      "unlinkHint": "A conta deixa de usar esta ficha. A ficha, as aulas, as notas e o histórico são preservados.",
+      "roleRequired": "Ligar uma ficha exige o papel Professor activo nesta escola. Este formulário não atribui papéis.",
+      "unchanged": "A ligação já corresponde à ficha escolhida. Não há alterações a guardar.",
+      "back": "Voltar",
+      "saved": "Ligação actualizada.",
+      "uncertain": "Não foi possível confirmar a alteração. Feche e consulte a ligação actual antes de tentar novamente."
+    },
+    "staffLink": {
+      "button": "Ficha de funcionário",
+      "named": "Gerir ficha de funcionário de {name}",
+      "title": "Ligação à ficha de funcionário",
+      "description": "Confirme a ficha que corresponde a {name} nesta escola.",
+      "loading": "A verificar a ligação…",
+      "unavailable": "Feche a janela e confirme a conta e a escola antes de tentar novamente.",
+      "current": "Ficha actual",
+      "after": "Ficha após a alteração",
+      "none": "Sem ligação",
+      "operation": "Operação",
+      "link": "Ligar ou substituir ficha",
+      "unlink": "Desligar ficha",
+      "code": "Código da ficha de funcionário",
+      "verify": "Verificar ficha",
+      "confirmLink": "Confirmar ligação",
+      "confirmUnlink": "Confirmar desligação",
+      "confirmHint": "Confira o nome e o código. A conta ficará associada a esta ficha profissional nesta escola.",
+      "unlinkHint": "A conta deixa de usar esta ficha de funcionário. A ficha, o histórico e as outras associações profissionais são preservados.",
+      "roleRequired": "Ligar uma ficha exige um vínculo de pessoal activo nesta escola. Este formulário não atribui papéis.",
+      "unchanged": "A ligação já corresponde à ficha escolhida. Não há alterações a guardar.",
+      "back": "Voltar",
+      "saved": "Ligação actualizada.",
+      "uncertain": "Não foi possível confirmar a alteração. Feche e consulte a ligação actual antes de tentar novamente."
+    },
+    "remove": {
+      "named": "Retirar associação de {name}",
+      "button": "Retirar associação",
+      "title": "Retirar associação desta escola?",
+      "description": "Esta pessoa deixa de aceder à escola seleccionada. Reveja a conta antes de confirmar.",
+      "preserved": "A conta global, as outras escolas e todas as fichas e registos académicos/financeiros são preservados. A reentrada requer um novo processo autorizado.",
+      "confirm": "Confirmar retirada",
+      "uncertain": "A resposta não chegou. Feche e actualize a lista para verificar o resultado antes de repetir."
+    }
+  },
+  "passwordChange": {
+    "title": "Palavra-passe",
+    "subtitle": "Proteja a sua conta em todas as escolas.",
+    "current": "Palavra-passe actual",
+    "new": "Nova palavra-passe",
+    "confirm": "Confirmar nova palavra-passe",
+    "policy": "Use entre 12 e 128 caracteres. Pode usar uma frase longa; os espaços são preservados.",
+    "effect": "A alteração termina todas as suas sessões, em todas as escolas, incluindo esta. Terá de entrar novamente.",
+    "google": "Se entra apenas com Google e não tem palavra-passe local, gira a palavra-passe na sua conta Google.",
+    "submit": "Alterar palavra-passe",
+    "submitting": "A alterar…",
+    "success": "Palavra-passe alterada.",
+    "signInAgain": "As sessões anteriores foram revogadas. Entre com a nova palavra-passe para continuar.",
+    "signIn": "Entrar novamente",
+    "errors": {
+      "forbidden": "A sessão já não é válida. Entre novamente.",
+      "invalid": "Use uma nova palavra-passe de 12 a 128 caracteres e repita-a exactamente na confirmação.",
+      "currentPassword": "Não foi possível confirmar a palavra-passe actual. Se usa apenas Google, gira o acesso na conta Google.",
+      "samePassword": "Escolha uma palavra-passe diferente da actual.",
+      "rateLimited": "Foram feitas demasiadas tentativas. Aguarde 15 minutos e tente novamente.",
+      "conflict": "A conta foi alterada durante este pedido. Entre novamente antes de tentar.",
+      "unavailable": "Não foi possível alterar a palavra-passe. Tente novamente mais tarde.",
+      "transport": "Não foi possível confirmar o resultado. Tente entrar novamente; se a alteração foi concluída, use a nova palavra-passe."
+    },
+    "initialRequired": "Antes de aceder à escola, substitua a palavra-passe temporária pela sua. Use a credencial entregue no campo Palavra-passe actual."
+  },
+  "staff": {
+    "title": "Pessoal",
+    "subtitle": "Fichas profissionais e funções na escola seleccionada.",
+    "hint": "A ficha profissional e o acesso à conta são geridos separadamente.",
+    "formHint": "Registe os dados profissionais. Esta ficha não cria uma conta nem atribui permissões.",
+    "create": "Adicionar funcionário",
+    "edit": "Editar",
+    "editNamed": "Editar ficha de {name}",
+    "createTitle": "Nova ficha de funcionário",
+    "editTitle": "Editar ficha de funcionário",
+    "loading": "A carregar…",
+    "contacts": "Contactos",
+    "status": "Estado",
+    "account": "Conta",
+    "linked": "Associada",
+    "notLinked": "Sem associação",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "allStates": "Todos os estados",
+    "search": "Procurar",
+    "searchLabel": "Nome, código, função ou contacto",
+    "count": "{count, plural, =0 {Nenhuma ficha} one {# ficha} other {# fichas}}",
+    "empty": "Nenhuma ficha encontrada",
+    "actions": "Acções",
+    "pagination": "Páginas do pessoal",
+    "page": "Página {page} de {total}",
+    "previous": "Anterior",
+    "next": "Seguinte",
+    "unspecified": "Não indicado",
+    "male": "Masculino",
+    "female": "Feminino",
+    "uncertain": "Não foi possível confirmar a gravação. Consulte os dados antes de repetir; o mesmo pedido não cria outra ficha.",
+    "fields": {
+      "code": "Código",
+      "name": "Nome completo",
+      "jobTitle": "Função profissional",
+      "title": "Tratamento",
+      "email": "Email de contacto",
+      "phone": "Telefone",
+      "birthDate": "Data de nascimento",
+      "gender": "Sexo",
+      "documentNumber": "Número do documento",
+      "nuit": "NUIT",
+      "address": "Endereço",
+      "qualification": "Habilitação",
+      "contractType": "Tipo de contrato",
+      "hireDate": "Data de admissão",
+      "notes": "Observações",
+      "isActive": "Ficha activa"
+    },
+    "errors": {
+      "forbidden": "Não tem permissão para gerir estas fichas.",
+      "invalid": "Verifique os campos da ficha.",
+      "unavailable": "Não é possível aceder ou guardar esta ficha.",
+      "conflict": "A ficha mudou. Feche e volte a abrir para rever os dados actuais.",
+      "duplicateCode": "Este código já é utilizado nesta escola.",
+      "schoolChanged": "A escola da sessão mudou. Feche o formulário e confirme a escola antes de tentar novamente.",
+      "requestChanged": "Este pedido já foi guardado com outros dados. Feche e consulte a ficha antes de editar."
+    }
+  },
+  "sessions": {
+    "title": "Sessões da conta",
+    "subtitle": "Controle onde a sua conta continua com sessão iniciada.",
+    "scope": "Esta gestão pertence à sua conta e abrange todas as escolas. As outras sessões serão recusadas no próximo pedido.",
+    "endOthers": "Terminar as outras sessões",
+    "confirmTitle": "Terminar sessão?",
+    "confirmDescription": "Esta acção mantém a sessão actual. Quem estiver na outra sessão terá de entrar novamente.",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "working": "A terminar…",
+    "error": "Não foi possível confirmar a operação. Tente novamente.",
+    "success": "Sessões terminadas.",
+    "current": "Esta sessão",
+    "other": "Outra sessão",
+    "created": "Entrada: {date}",
+    "seen": "Última actividade: {date}",
+    "end": "Terminar sessão",
+    "currentBadge": "Em utilização",
+    "limit": "Até 25 sessões activas, com horas de Moçambique. A actividade é actualizada a cada cinco minutos."
   }
 }

@@ -15,6 +15,7 @@ export interface PaymentRow {
 export interface InvoiceForPayment {
   readonly id: string;
   readonly reference: string;
+  readonly currency: string;
   readonly total: string;
   readonly paidAmount: string;
   readonly status: InvoiceStatus;
@@ -56,6 +57,7 @@ export async function getInvoiceForPayment(
     select: {
       id: true,
       reference: true,
+      currency: true,
       total: true,
       paidAmount: true,
       status: true,
@@ -81,6 +83,7 @@ export async function getInvoiceForPayment(
   return {
     id: invoice.id,
     reference: invoice.reference,
+    currency: invoice.currency,
     total: invoice.total.toString(),
     paidAmount: invoice.paidAmount.toString(),
     status: invoice.status,
@@ -91,6 +94,7 @@ export async function getInvoiceForPayment(
 
 export interface Receipt {
   readonly paymentId: string;
+  readonly currency: string;
   readonly amount: string;
   readonly method: PaymentMethod;
   readonly provider: PaymentProvider | null;
@@ -113,6 +117,7 @@ export async function getReceipt(schoolId: string, paymentId: string): Promise<R
     select: {
       id: true,
       amount: true,
+      currency: true,
       method: true,
       provider: true,
       status: true,
@@ -132,6 +137,7 @@ export async function getReceipt(schoolId: string, paymentId: string): Promise<R
 
   return {
     paymentId: payment.id,
+    currency: payment.currency,
     amount: payment.amount.toString(),
     method: payment.method,
     provider: payment.provider,

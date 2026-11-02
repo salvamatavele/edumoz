@@ -25,10 +25,9 @@ async function getStudentGrades(schoolId: string, studentId: string): Promise<Ow
 
   if (!student) return null;
 
-  // Trimestre por fechar não tem `TermResult` nenhum para mostrar — nada a filtrar aqui
-  // além de seguir a relação: só existe o que o fecho já materializou.
+  // Reopened terms retain historical results for auditing, but do not publish them.
   const results = await db.termResult.findMany({
-    where: { enrollment: { studentId } },
+    where: { enrollment: { studentId }, term: { status: "CLOSED" } },
     select: {
       average: true,
       finalScore: true,

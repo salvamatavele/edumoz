@@ -9,24 +9,23 @@ import {
   FileText,
   GraduationCap,
   Home,
-  LogOut,
   Menu,
   NotebookPen,
   Settings,
+  ShieldCheck,
   Users,
   Wallet,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { SignOutButton } from "@/features/identity/ui/sign-out-button";
 import { useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { Logo } from "@/components/layout/logo";
-import { SchoolSwitcher } from "@/components/layout/school-switcher";
+import { SchoolSwitcher, type SchoolSwitcherAccess } from "@/components/layout/school-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Button } from "@/components/ui/button";
 import { Link, usePathname } from "@/i18n/navigation";
 import type { StaticAppPathname } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
@@ -44,6 +43,9 @@ export interface DashboardNavItem {
  */
 const NAV_ICONS: Partial<Record<StaticAppPathname, LucideIcon>> = {
   "/students": Users,
+  "/users": Contact,
+  "/account/password": ShieldCheck,
+  "/account/sessions": ShieldCheck,
   "/portal": Home,
   "/attendance": ClipboardList,
   "/attendance-report": CalendarCheck,
@@ -51,6 +53,7 @@ const NAV_ICONS: Partial<Record<StaticAppPathname, LucideIcon>> = {
   "/report-cards": FileText,
   "/academic": GraduationCap,
   "/teachers": Contact,
+  "/staff": Contact,
   "/assessment": Award,
   "/settings": Settings,
   "/timetables": CalendarClock,
@@ -109,7 +112,6 @@ interface SidebarFooterProps {
 }
 
 function SidebarFooter({ userName, subtitle }: SidebarFooterProps) {
-  const t = useTranslations("auth");
   const initial = userName.trim().charAt(0).toUpperCase() || "?";
 
   return (
@@ -125,21 +127,14 @@ function SidebarFooter({ userName, subtitle }: SidebarFooterProps) {
           <p className="truncate text-sm font-medium text-foreground">{userName}</p>
           {subtitle ? <p className="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t("signOut")}
-          onClick={() => signOut({ callbackUrl: "/" })}
-        >
-          <LogOut aria-hidden="true" className="size-5" strokeWidth={1.75} />
-        </Button>
+        <SignOutButton />
       </div>
     </div>
   );
 }
 
 interface DashboardShellProps {
+  readonly schoolAccess?: SchoolSwitcherAccess;
   readonly navItems: readonly DashboardNavItem[];
   readonly userName: string;
   readonly schoolName: string | null;
@@ -156,6 +151,7 @@ interface DashboardShellProps {
  * quem vê o quê.
  */
 export function DashboardShell({
+  schoolAccess,
   navItems,
   userName,
   schoolName,
@@ -221,7 +217,7 @@ export function DashboardShell({
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <SchoolSwitcher />
+            <SchoolSwitcher access={schoolAccess} />
             <LocaleSwitcher />
             <ThemeToggle />
           </div>

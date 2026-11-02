@@ -159,6 +159,7 @@ describe("closeTerm", () => {
   });
 
   afterAll(async () => {
+    await prisma.term.updateMany({ where: { schoolId }, data: { status: "OPEN" } });
     await prisma.auditLog.deleteMany({ where: { schoolId } });
     await prisma.termResult.deleteMany({ where: { schoolId } });
     await prisma.grade.deleteMany({ where: { schoolId } });

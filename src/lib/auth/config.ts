@@ -6,15 +6,15 @@ import Google from "next-auth/providers/google";
 import {
   acceptInvitations,
   authoriseSignIn,
-  findUserForCredentials,
-  loadIsPlatformAdmin,
-  loadSessionMemberships,
 } from "@/features/identity/data/sign-in";
-import { resolveActiveSchool } from "@/features/identity/domain/access";
+import { resolveActiveSchool, type PermissionGrant } from "@/features/identity/domain/access";
 import { prisma } from "@/lib/db/client";
 import type { Role } from "@/types";
 
-import { verifyPassword } from "./password";
+import { authenticateCredentials } from "./credential-authentication";
+import { revokeSignedSession, validateRegisteredSession } from "./session-registry";
+import { safeAuthLogger } from "./safe-logger";
+import { loadEffectiveSessionAccess } from "./session-access";
 
 /**
  * Forma do JWT desta aplicação.
@@ -25,9 +25,17 @@ import { verifyPassword } from "./password";
  */
 type AppToken = {
   userId?: string;
+  sessionNonce?: string;
+  authSessionId?: string;
+  authVersion?: number;
+  passwordChangeRequired?: boolean;
   schoolId?: string | null;
   memberships?: Array<{ schoolId: string; schoolName: string; role: Role }>;
   isPlatformAdmin?: boolean;
+  role?: Role | null;
+  permissionRoleId?: string | null;
+  permissionsConfigured?: boolean;
+  permissions?: PermissionGrant[];
 };
 
 /**
@@ -42,10 +50,11 @@ type AppToken = {
  */
 export const authConfig = {
   adapter: PrismaAdapter(prisma),
+  logger: safeAuthLogger,
+  debug: false,
 
-  // JWT e não sessão em base de dados: o papel muda com a escola activa, e reler a
-  // Membership a cada pedido seria uma consulta extra em todas as páginas.
-  session: { strategy: "jwt" },
+  // JWT identifies the account; current privileges are reloaded on every session request.
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
 
   pages: { signIn: "/entrar", error: "/entrar" },
 
@@ -64,35 +73,22 @@ export const authConfig = {
         identifier: { label: "E-mail ou telemóvel", type: "text" },
         password: { label: "Palavra-passe", type: "password" },
       },
-      async authorize(credentials) {
-        const identifier = String(credentials?.identifier ?? "");
-        const password = String(credentials?.password ?? "");
-
-        if (!identifier || !password) return null;
-
-        const user = await findUserForCredentials(identifier);
-
-        // `verifyPassword` devolve false — nunca lança — quando não há hash. Uma conta só
-        // com Google e uma palavra-passe errada têm de ser indistinguíveis daqui de fora.
-        if (!user || !(await verifyPassword(password, user.passwordHash))) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
-      },
+      authorize: authenticateCredentials,
     }),
   ],
+
+  events: {
+    async signOut(message) {
+      if ("token" in message && message.token) await revokeSignedSession(message.token);
+    },
+  },
 
   callbacks: {
     async signIn({ user, account, profile }) {
       const provider = account?.provider === "google" ? "google" : "credentials";
 
       const decision = await authoriseSignIn({
+        userId: provider === "credentials" ? user.id : undefined,
         email: user.email ?? null,
         emailVerified:
           provider === "google" ? profile?.email_verified === true : true,
@@ -120,27 +116,48 @@ export const authConfig = {
 
       if (user?.id) {
         app.userId = user.id;
-        app.memberships = await loadSessionMemberships(user.id);
-        app.schoolId = app.memberships[0]?.schoolId ?? null;
-        // Lido uma só vez, aqui — não muda com `trigger === "update"` (troca de escola).
-        // Um superadmin é superadmin em qualquer escola, sempre.
-        app.isPlatformAdmin = await loadIsPlatformAdmin(user.id);
       }
 
-      // Trocar de escola reemite o token com o papel dessa escola. `resolveActiveSchool`
-      // valida a escola pedida contra as Membership do token — sem isto, bastaria pedir a
-      // troca para qualquer schoolId e a sessão passaria a apontar para uma escola alheia.
+      let access = await loadEffectiveSessionAccess(app.userId ?? "", user?.id ? undefined : app.schoolId ?? null);
+      if (!access) return null;
+      if (user?.id) {
+        // A credential check made before a concurrent password change cannot mint a new session.
+        if (user.authVersion !== undefined && user.authVersion !== access.authVersion) return null;
+        app.authVersion = access.authVersion;
+      } else if ((app.authVersion ?? 0) !== access.authVersion) {
+        // Legacy tokens are valid only until the first credential change.
+        return null;
+      }
+      app.authVersion = access.authVersion;
       const requested = (session as { schoolId?: unknown } | undefined)?.schoolId;
 
       if (trigger === "update" && typeof requested === "string") {
-        app.schoolId = resolveActiveSchool(
-          app.memberships ?? [],
-          requested,
-          app.schoolId ?? null,
-          app.isPlatformAdmin ?? false,
+        const selected = resolveActiveSchool(
+          access.memberships, requested, access.schoolId, access.isPlatformAdmin,
         );
+        if (selected !== access.schoolId) {
+          const updated = await loadEffectiveSessionAccess(access.userId, selected);
+          if (!updated || updated.authVersion !== app.authVersion) return null;
+          if (updated.schoolId) access = updated;
+        }
       }
 
+      const registered = await validateRegisteredSession({ ...token, userId: access.userId, authVersion: access.authVersion }, Boolean(user?.id));
+      if (!registered) return null;
+      app.sessionNonce = registered.sessionNonce;
+      app.authSessionId = registered.authSessionId;
+
+      app.passwordChangeRequired = access.passwordChangeRequired;
+      app.memberships = access.memberships;
+      app.schoolId = access.schoolId;
+      app.role = access.role;
+      app.isPlatformAdmin = access.isPlatformAdmin;
+      app.permissionRoleId = access.permissionRoleId;
+      app.permissionsConfigured = access.permissionsConfigured ?? Boolean(access.permissionRoleId);
+      app.permissions = access.permissions;
+      token.name = access.user.name;
+      token.email = access.user.email;
+      token.picture = access.user.image;
       return token;
     },
 
@@ -148,11 +165,16 @@ export const authConfig = {
       const app = token as AppToken;
 
       session.user.id = app.userId ?? "";
+      session.user.authVersion = app.authVersion ?? 0;
+      session.user.authSessionId = app.authSessionId;
+      session.passwordChangeRequired = app.passwordChangeRequired ?? false;
       session.schoolId = app.schoolId ?? null;
       session.memberships = app.memberships ?? [];
-      session.role =
-        app.memberships?.find((m) => m.schoolId === app.schoolId)?.role ?? null;
+      session.role = app.role ?? null;
       session.isPlatformAdmin = app.isPlatformAdmin ?? false;
+      session.permissionRoleId = app.permissionRoleId ?? null;
+      session.permissionsConfigured = app.permissionsConfigured ?? Boolean(app.permissionRoleId);
+      session.permissions = app.permissions ?? [];
 
       return session;
     },

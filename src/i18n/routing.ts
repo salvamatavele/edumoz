@@ -39,6 +39,10 @@ export const routing = defineRouting({
       pt: "/entrar",
       en: "/sign-in",
     },
+    "/account/sessions": { pt: "/conta/sessoes", en: "/account/sessions" },
+    "/account/password": { pt: "/conta/palavra-passe", en: "/account/password" },
+    "/staff": { pt: "/pessoal", en: "/staff" },
+    "/users": { pt: "/utilizadores", en: "/users" },
     "/students": {
       pt: "/alunos",
       en: "/students",
@@ -117,6 +121,10 @@ export const routing = defineRouting({
  * língua, para a mesma regra valer em `/alunos` e em `/en/students`.
  */
 export const PROTECTED_PATHNAMES: readonly AppPathnameKey[] = [
+  "/staff",
+  "/account/password",
+  "/account/sessions",
+  "/users",
   "/students",
   "/portal",
   "/attendance",

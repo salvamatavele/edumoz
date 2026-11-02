@@ -2,6 +2,77 @@
 
 ## [Não publicado]
 
+### M01 — atribuições múltiplas e posse
+
+- Perfis múltiplos por associação escolar, preparação de suspensos, configuração vazia restritiva, revisões e auditoria atómica; migração preserva acessos anteriores.
+- Corrigidos acesso directo de docentes ao directório escolar sem grant e pautas sem filtro de posse; impedida auto-associação profissional por gestores delegados.
+- 146 ficheiros/1260 testes, build Turbopack, tipos, restauro de 48 tabelas e navegador pt/en/móvel passaram. Cópias temporárias autorizadas eliminadas. Excepções e restante M01 continuam em execução.
+
+### M01 — criação de papéis e catálogo
+
+- Criação idempotente e auditada com escola fixa, actor persistido e limites de campos; repetições/alterações incertas não duplicam nem sobrescrevem.
+- Preparação local inclui as 50 entradas do catálogo sem mudar grants; seed idempotente valida o destino de teste e evita erros brutos. Corrigido corte móvel da grelha.
+- 132 ficheiros/1149 testes passaram; build/lint e navegador pt/en/A→B/móvel verificados. Papéis múltiplos e restantes fluxos continuam em execução.
+
+### M01 — retirada escolar e última via administrativa
+
+- Retirada local com prévia/revisão, confirmação e auditoria, preservando conta global, fichas e outras escolas. Associação retirada não reabre por activação ou vínculo antigos.
+- Aceitação de convites e atribuição de papéis partilham o lock escolar; actor e estado são relidos. Protecção da última administração abrange retirada, suspensão e restrição de papéis.
+- 131 ficheiros/1140 testes passaram sequencialmente; build, restauro de 47 tabelas e navegador pt/en/A→B/leitor/móvel aprovados. Plano global continua.
+
+### M01 — sessões revogáveis
+
+- Registry JWT por conta, logout confirmado no servidor, consulta/revogação de outras sessões pelo titular, versões de credencial e compatibilidade legada sem reactivação.
+- Corrigida a corrida MariaDB na adopção de cookies antigos; nonce não sai no JSON/BD/auditoria. Migração e restauro de 47 tabelas verificados.
+- 128 ficheiros/1118 testes passaram; build Turbopack aprovado, lint sem erros/um aviso conhecido. Navegador pt/en, leitor, logout/retorno e móvel verificados; plano global continua.
+
+### M01 — pessoal e vínculos profissionais
+
+- Fichas de funcionários por escola com dados profissionais, paginação/filtros, criação idempotente e edição auditada com revisão. Novo recurso de permissões sem concessões automáticas.
+- Vínculo de funcionário com confirmação e motor comum ao docente; acumulação preserva as duas fichas e outras escolas. Migração, backup/restauro e navegador pt/en/móvel/restrito verificados. Corrigida a fronteira privada da nova rota.
+- 122 ficheiros/1095 testes passaram, tipos/build aprovados; lint sem erros e um aviso conhecido. Execução global continua.
+
+### M01 — vínculo docente escolar
+
+- Ligação, substituição e desligação de ficha docente com prévia nome/código e confirmação, incluindo contas partilhadas. Revisões e auditoria transaccional protegem concorrência; escola B, identidade global e histórico são preservados. Exige papel Professor activo para ligar, sem atribuir papéis automaticamente.
+- 117 ficheiros/1055 testes passaram; tipos/build Turbopack aprovados, lint sem erros e um aviso conhecido. Navegador pt/en/móvel e recusas de permissão/contexto verificadas. Ficha/vínculo de funcionário e restante M01 continuam pendentes.
+
+### M01 — edição de identidade exclusiva
+
+- Edição de nome e contactos de comunicação com revisão concorrente e auditoria atómica. Preserva login, credenciais, papéis e vínculos; recusa contas partilhadas e formulários de outra escola.
+- 114 ficheiros/1026 testes, tipos e build Turbopack passaram; lint sem erros/um aviso conhecido. Navegador verificou persistência, escolas A/B, leitor, pt/en e móvel. Vínculos profissionais continuam pendentes; M01 parcial.
+
+### M01 — criação e credenciais iniciais
+
+- Criação escolar atómica/idempotente, papéis base e vínculo docente local, código de entrada próprio, contactos de comunicação sem associação automática, segredo aleatório de 24h e troca obrigatória no servidor. Reemissão limitada a contas ainda iniciais e exclusivas; versões anteriores revogadas. Migrações aditivas preservam logins/grants legados.
+- Protegido o último gestor utilizável e separados os limites por finalidade, com normalização de telefones. UI pt/en, entrega única, estados, procura e zero resultados revistos.
+- 111 ficheiros/1001 testes, tipos e build Turbopack passaram; lint sem erros e um aviso conhecido. Navegador verificou criação, isolamento A/B, leitor, bloqueio inicial e acesso após activação sintética pela DAL, em desktop/móvel. Convites, identidade/vínculos completos, perfis avançados, recuperação, QR e impressos continuam pendentes.
+
+### M01 — palavra-passe própria e revogação
+
+- Página pt/en para troca própria com password actual, nova/confirmar, limite persistente e auditoria sem segredos. Versão global de autenticação revoga sessões antigas em todas as escolas e protege login concorrente; contas Google sem password local mantêm esse percurso.
+- Migração aditiva preservou contas/hashes; aplicada após ensaio e backup verificado. 105 ficheiros/912 testes, tipos e build Turbopack passaram; lint sem erros/um aviso conhecido. Navegador confirmou apresentação móvel e recusa de sessão/password antigas após troca sintética pela DAL. Criação e emissão inicial continuam pendentes.
+
+### M01 — primeira subentrega de utilizadores
+
+- Lista escolar com filtros e paginação SQL, activação/suspensão local, auditoria e protecção do último gestor. Traduções pt/en e permissões users/view e users/edit sem concessões automáticas a papéis restritos.
+- Corrigidos selector de escola após revogação, tradução e alvo de fecho dos diálogos. Validação: 101 ficheiros/887 testes, tipos, build Turbopack e navegador A/B, desktop/móvel; lint sem erros e um aviso conhecido. Criação, credenciais e restante M01 continuam pendentes.
+
+### Fundação da paridade esagrada-next
+
+- Protegido o retorno do login contra redireccionamentos externos ou caminhos ambíguos, preservando destinos válidos pt/en. Navegador sintético e 48 testes novos verificados; regressão actual: 87 ficheiros/751 testes passaram. Etapa geral de segurança ainda em curso.
+
+- Concluídas as protecções de notas/fecho e de concorrência financeira: idempotência de facturas/pagamentos, referências serializadas, saldos reconciliados e estornos protegidos de respostas atrasadas. Ensaios de migração e navegador pt/en passaram; regressão de 85 ficheiros/703 testes e build Turbopack verdes. Programa em 12/313 tarefas; módulos ainda por aceitar.
+
+- Separada a base local de testes da base de desenvolvimento: preparação com conta aleatória restrita, configuração Vitest validada antes dos testes e guarda adicional no cliente Prisma.
+- Acrescentado `test:unit` sem base de dados e limite de dois workers para os testes locais; removida a dependência da escola de demonstração no teste integrado de horários.
+- Acrescentados testes de URLs seguras e privilégios; suite verificada com 72 ficheiros e 486 testes a passar na base de testes.
+- Acrescentado ensaio de backup/restauro sintético encriptado e documentação de execução sem Docker. Output de build de produção separado do desenvolvimento; `npm run build` validado com Turbopack após renovar a cache de produção e autorizar o socket interno do worker PostCSS.
+- Consolidado o design existente e implementada autorização por pedido: revogação de memberships/superadmin, grants em 23 actions, páginas e navegação, leitura separada de escrita, catálogo financeiro/horários sem grants automáticos.
+- Corrigidos cookies fragmentados e recuperação da escola restante após revogação; navegação autenticada pt/en e escolas A/B verificada em instância sintética. Regressão actual: 78 ficheiros/548 testes, tipos e build Turbopack verdes; lint sem erros e com dois avisos preexistentes.
+- Iniciada a integridade de tenant: bloqueadas mudanças directas de escola em updates/upserts, operações na relação school e valores incompatíveis em criação. Concluída a tarefa 1.10: referências/junções/nested writes protegidas, 64 triggers persistentes, histórico validado antes da migração e ensaio de concorrência. Regressão após esta guarda: 78 ficheiros/557 testes passaram; build Turbopack verde.
+- Aprovação e acompanhamento da clonagem em `openspec/changes/clone-esagrada-functional-parity/`; nenhum módulo novo declarado concluído nesta fase.
+
 ## Fase 11 — Finanças: propinas, facturação, pagamentos e portal da família
 
 Change (OpenSpec): [`openspec/changes/finance/`](openspec/changes/finance/).
@@ -728,3 +799,30 @@ encontradas e corrigidas antes de haver dados:
 - **`useSyncExternalStore` no selector de tema** em vez de `useEffect` +
   `setState`: o elemento raiz é a fonte de verdade e a regra
   `react-hooks/set-state-in-effect` do React Compiler rejeita a alternativa.
+
+### Integridade multi-escolas e anual
+
+- Cliente de escola restringe modelos globais, SQL livre, junções e navegação relacional; referências validadas no MariaDB sem alterar políticas de exclusão existentes.
+- Migração de integridade aplicada em teste e desenvolvimento após backup; ensaio de histórico incompatível não reescreveu dados. Suite actual: 79 ficheiros/655 testes passaram, com criação e matrícula sintéticas verificadas no navegador.
+
+### Notas e fecho de trimestre
+
+- Lotes de notas respeitam maxScore e estado aberto, com rollback integral de pedidos inválidos. Lançamento, criação de avaliação e fecho serializados pelo trimestre; plano e esquema lidos na transacção de fecho.
+- Reabertura com permissão, motivo obrigatório e snapshots auditáveis; resultados reabertos ocultos do portal/pauta até novo fecho. Grelha fechada fica em consulta.
+- Migração aditiva com seis triggers aplicada após backup. Suite: 81 ficheiros/672 testes; percurso pt/en verificado no navegador com resultado final 18 e snapshot anterior 15.
+
+### Revisão das funcionalidades existentes — 2026-10-28
+
+- Corrigidos acesso directo a presenças, submissão/reabertura concorrentes, datas, precisão decimal, login por telefone, contexto de idioma/escola/factura e reconciliação de rascunhos.
+- Introduzidos limitador persistente de credenciais, limite do corpo Auth.js, validação de origem e protecções de cache/cabeçalhos; actualizadas dependências com alertas conhecidos.
+- Verificados build Turbopack, regressão e percursos de navegador em base sintética isolada; detalhes e limites em `docs/specs/esagrada-existing-corrections.md`.
+
+- Continuação da revisão: corrigidos filtros/períodos de consulta financeira e corrida de horários de alunos partilhados. Regressão: 862 testes; build e navegador de produção validados. Sem novos módulos ou migrações nesta continuação.
+
+- Página 404 localizada em pt/en com recuperação no idioma actual. Validação final desta continuação: 864 testes, build Turbopack e dez verificações HTTP de produção aprovados.
+
+- Aceitação da fundação existente em desktop/móvel, pt/en e escolas A/B com papéis restritos; mensagem de consulta de presenças corrigida. Contrato M01 e inventário da origem preparados para aprovação, sem implementação nova desse módulo.
+
+- M01: edição/eliminação escolar de papéis com revisão e auditoria atómica, protecção de perfis de sistema e associações históricas, FK RESTRICT e matriz de níveis com ajustes finos. Corrigidas validação ICU e actualização desnecessária ao cancelar. 136 ficheiros/1182 testes, build/tipos e navegador pt/en/móvel aprovados; M01 continua em execução.
+
+- M01: preparação escolar explícita dos nove perfis de sistema, idempotente e sem atribuir pessoas ou reintroduzir grants retirados. Correspondência tipada de 55 capacidades/dependências e projecções conservadoras para os consumidores disponíveis. 140 ficheiros/1201 testes, build e navegador pt/en/móvel aprovados; atribuições múltiplas e granularidade seguinte continuam em execução.

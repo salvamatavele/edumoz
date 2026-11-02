@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Role } from "@/types";
@@ -94,7 +95,7 @@ describe("confirmPayment", () => {
 
   it("confirma só na segunda consulta, e uma terceira chamada não duplica nem soma duas vezes", async () => {
     // Número comum, sem sufixo de teste: o caminho real, PENDING → PENDING → CONFIRMED.
-    await initiateMobileMoneyPayment({ invoiceId, provider: "MPESA", payerPhone: "+258849876543" } as never);
+    await initiateMobileMoneyPayment({ idempotencyKey: randomUUID(), invoiceId, provider: "MPESA", payerPhone: "+258849876543" } as never);
     const payment = await prisma.payment.findFirstOrThrow({ where: { invoiceId, method: "MOBILE_MONEY" } });
     expect(payment.status).toBe("PENDING");
 

@@ -21,7 +21,7 @@ import type { ScheduleConflict } from "@/features/academic/domain/scheduling";
 import { useRouter } from "@/i18n/navigation";
 import { DayOfWeek } from "@/types";
 
-type ScheduleBoardProps = ScheduleBoardData;
+type ScheduleBoardProps = ScheduleBoardData & { readonly canCreate?: boolean; readonly canEdit?: boolean };
 
 type ViewMode = "class" | "teacher" | "room";
 
@@ -49,7 +49,7 @@ interface Period {
  * nomes já disponíveis em `options` — só a apresentação repete-se entre cliente e
  * servidor, nunca a lógica de detecção.
  */
-export function ScheduleBoard({ entries, options, candidates, memberships, academicYear }: ScheduleBoardProps) {
+export function ScheduleBoard({ entries, options, candidates, memberships, academicYear, canCreate = true, canEdit = true }: ScheduleBoardProps) {
   const t = useTranslations("scheduling");
   const tAcademic = useTranslations("academic");
   const router = useRouter();
@@ -142,10 +142,10 @@ export function ScheduleBoard({ entries, options, candidates, memberships, acade
           />
         </div>
 
-        <Button size="sm" onClick={() => setDialogEntry({})}>
+        {canCreate ? <Button size="sm" onClick={() => setDialogEntry({})}>
           <Plus aria-hidden="true" strokeWidth={1.75} />
           {t("board.placeTrigger")}
-        </Button>
+        </Button> : null}
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
@@ -175,6 +175,7 @@ export function ScheduleBoard({ entries, options, candidates, memberships, acade
                       {entry ? (
                         <button
                           type="button"
+                          disabled={!canEdit}
                           onClick={() => setDialogEntry(entry)}
                           className="flex w-full flex-col gap-0.5 rounded-md border border-border-strong bg-surface p-2 text-left transition-colors duration-200 ease-(--ease-enter) hover:bg-muted"
                         >
@@ -184,7 +185,7 @@ export function ScheduleBoard({ entries, options, candidates, memberships, acade
                             {viewMode !== "room" ? ` · ${entry.roomName}` : null}
                           </span>
                         </button>
-                      ) : timeSlotId ? (
+                      ) : timeSlotId && canCreate ? (
                         <button
                           type="button"
                           onClick={() =>
@@ -281,6 +282,7 @@ function PlaceEntryForm({
   const t = useTranslations("scheduling");
   const tForm = useTranslations("form");
   const tAcademic = useTranslations("academic");
+  const router = useRouter();
   const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [teachingGroupId, setTeachingGroupId] = useState(initial.teachingGroupId ?? "");
@@ -306,19 +308,21 @@ function PlaceEntryForm({
     setFormError(null);
 
     startTransition(async () => {
-      const result = await placeScheduleEntry({ id: initial.id, teachingGroupId, roomId, timeSlotId });
+      try {
+        const result = await placeScheduleEntry({ id: initial.id, teachingGroupId, roomId, timeSlotId });
 
-      if (result.status === "conflict") {
-        setFormError(result.conflicts.join(" "));
-        return;
-      }
+        if (result.status === "conflict") {
+          setFormError(result.conflicts.join(" "));
+          return;
+        }
 
-      if (result.status === "error") {
-        setFormError(result.message);
-        return;
-      }
+        if (result.status === "error") {
+          setFormError(result.message);
+          return;
+        }
 
-      onSaved(result.warning);
+        onSaved(result.warning);
+      } catch { setFormError(tForm("genericError")); router.refresh(); }
     });
   }
 

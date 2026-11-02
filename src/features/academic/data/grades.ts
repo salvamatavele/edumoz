@@ -225,6 +225,7 @@ export interface GradeRoster {
   readonly entries: readonly GradeRosterEntry[];
   /** Falso quando `viewerTeacherId` não é quem lecciona — só consulta. */
   readonly isOwn: boolean;
+  readonly isTermClosed: boolean;
 }
 
 /**
@@ -251,6 +252,7 @@ export async function getGradeRoster(
       maxScore: true,
       weight: true,
       termId: true,
+      term: { select: { status: true } },
       teachingGroupId: true,
       component: { select: { code: true } },
       teachingGroup: { select: { name: true, teacherId: true, subject: { select: { name: true } } } },
@@ -338,5 +340,6 @@ export async function getGradeRoster(
     scheme: resolvedScheme.definition,
     entries,
     isOwn,
+    isTermClosed: assessment.term.status === "CLOSED",
   };
 }

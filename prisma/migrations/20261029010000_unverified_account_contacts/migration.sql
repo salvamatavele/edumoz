@@ -1,0 +1,1 @@
+ALTER TABLE `User` ADD COLUMN `contactEmail` VARCHAR(254) NULL, ADD COLUMN `contactPhone` VARCHAR(191) NULL;

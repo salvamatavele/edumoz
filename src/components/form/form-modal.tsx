@@ -2,15 +2,16 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useId, useState, useTransition } from "react";
 import {
   type DefaultValues,
   type FieldValues,
   type Path,
-  type Resolver,
   useForm,
 } from "react-hook-form";
+
+import type { ZodType } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
+import { validationMessages } from "./validation-messages";
 
 import type {
   FieldDefinition,
@@ -97,6 +99,7 @@ function FormModalBody<TValues extends FieldValues>({
   submitLabel,
 }: FormModalProps<TValues>) {
   const t = useTranslations("form");
+  const locale = useLocale();
   const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -106,7 +109,7 @@ function FormModalBody<TValues extends FieldValues>({
     // TypeScript não consegue provar a variância. O contrato está garantido pelo tipo de
     // `FormDefinition<TValues>`, que liga o esquema aos valores — este cast só desfaz o
     // nó dos genéricos, não relaxa nenhuma validação.
-    resolver: zodResolver(definition.schema as never) as Resolver<TValues>,
+    resolver: zodResolver(definition.schema as ZodType<TValues, TValues>, { error: validationMessages(locale) }),
     defaultValues,
     mode: "onTouched",
   });
@@ -215,7 +218,8 @@ function FormField<TValues extends FieldValues>({
   // `Extract<keyof TValues, string>` é uma chave de topo e portanto um `Path` válido,
   // mas o `Path` do react-hook-form é recursivo e o TypeScript não o deduz sozinho.
   const name = field.name as unknown as Path<TValues>;
-  const error = form.formState.errors[name]?.message as string | undefined;
+  const message = form.formState.errors[name]?.message as string | undefined;
+  const error = message === "endBeforeStart" ? t("endBeforeStart") : message;
   const wrapper = cn(
     field.fullWidth || field.kind === "textarea" ? "sm:col-span-2" : "",
   );

@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signInDestination } from "@/features/identity/domain/sign-in-destination";
 import { getPathname } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 
@@ -33,8 +34,10 @@ export function SignInForm() {
   // Sem `?continuar=`, aterra em `/alunos` (ou `/portal`, se `/alunos` reencaminhar um
   // papel de família — ver docs/specs/role-shell.md) em vez da página pública. Quem chega
   // aqui já quer entrar na aplicação, não voltar à montra.
-  const callbackUrl =
-    searchParams.get("continuar") ?? getPathname({ locale, href: "/students" });
+  const callbackUrl = signInDestination(
+    searchParams.get("continuar"),
+    getPathname({ locale, href: "/students" }),
+  );
 
   function handleCredentials(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,18 +46,26 @@ export function SignInForm() {
     const data = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await signIn("credentials", {
-        identifier: String(data.get("identifier") ?? ""),
-        password: String(data.get("password") ?? ""),
-        redirect: false,
-      });
+      try {
+        const result = await signIn("credentials", {
+          identifier: String(data.get("identifier") ?? ""),
+          password: String(data.get("password") ?? ""),
+          redirect: false,
+        });
+        if (!result || result.error || !result.ok) {
+          setError(t("failed"));
+          return;
+        }
+        window.location.href = callbackUrl;
+      } catch { setError(t("failed")); }
+    });
+  }
 
-      if (result?.error) {
-        setError(t("failed"));
-        return;
-      }
-
-      window.location.href = callbackUrl;
+  function handleGoogle() {
+    setError(null);
+    startTransition(async () => {
+      try { await signIn("google", { callbackUrl }); }
+      catch { setError(t("failed")); }
     });
   }
 
@@ -75,7 +86,7 @@ export function SignInForm() {
         size="lg"
         className="w-full"
         disabled={isPending}
-        onClick={() => signIn("google", { callbackUrl })}
+        onClick={handleGoogle}
       >
         {t("withGoogle")}
       </Button>

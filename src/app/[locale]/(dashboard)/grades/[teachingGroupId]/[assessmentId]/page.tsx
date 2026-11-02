@@ -101,6 +101,7 @@ export default async function GradeSheetPage({
         otherEntries: entry.otherEntries,
       }))}
       readOnly={!roster.isOwn}
+      termClosed={roster.isTermClosed}
     />
   );
 }

@@ -1,0 +1,43 @@
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, expect, it, vi } from "vitest";
+import { NextIntlClientProvider } from "next-intl";
+import { messages, renderWithIntl } from "@/test/intl";
+import { installSystemRolesAction } from "../actions/install-system-roles";
+import { InstallSystemRolesDialog } from "./install-system-roles-dialog";
+vi.mock("../actions/install-system-roles", () => ({ installSystemRolesAction: vi.fn() }));
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ refresh }) }));
+beforeEach(() => vi.resetAllMocks());
+it("previews all nine roles without assigning anyone and keeps the opening school", async () => {
+  vi.mocked(installSystemRolesAction).mockResolvedValue({ status: "success", created: 9 });
+  const view = renderWithIntl(<InstallSystemRolesDialog schoolId="a" />);
+  await userEvent.click(screen.getByRole("button", { name: "Preparar perfis de sistema" }));
+  expect(screen.getAllByRole("listitem")).toHaveLength(9);
+  expect(screen.getByText(/não atribui pessoas/)).toBeVisible();
+  expect(installSystemRolesAction).not.toHaveBeenCalled();
+  view.rerender(<NextIntlClientProvider locale="pt" messages={messages.pt}><InstallSystemRolesDialog schoolId="b" /></NextIntlClientProvider>);
+  await userEvent.click(screen.getByRole("button", { name: "Preparar perfis" }));
+  await waitFor(() => expect(installSystemRolesAction).toHaveBeenCalledWith({ expectedSchoolId: "a" }));
+  await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
+});
+it("keeps a safely retryable error visible without reporting success", async () => {
+  vi.mocked(installSystemRolesAction).mockRejectedValue(new Error("Transport"));
+  renderWithIntl(<InstallSystemRolesDialog schoolId="a" />, "en");
+  await userEvent.click(screen.getByRole("button", { name: "Prepare system roles" }));
+  await userEvent.click(screen.getByRole("button", { name: "Prepare roles" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("existing changes will be preserved");
+  expect(refresh).not.toHaveBeenCalled();
+});
+it("does not close the preview or submit twice while installation is pending", async () => {
+  let finish!: (value: { status: "success"; created: number }) => void;
+  vi.mocked(installSystemRolesAction).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  renderWithIntl(<InstallSystemRolesDialog schoolId="a" />);
+  await userEvent.click(screen.getByRole("button", { name: "Preparar perfis de sistema" }));
+  await userEvent.click(screen.getByRole("button", { name: "Preparar perfis" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled());
+  expect(screen.getByRole("button", { name: "A guardar…" })).toBeDisabled();
+  expect(installSystemRolesAction).toHaveBeenCalledTimes(1);
+  finish({ status: "success", created: 9 });
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+});

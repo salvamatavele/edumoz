@@ -6,6 +6,9 @@
     "description": "School management platform bringing students, classes, grades, attendance and tuition together in one place."
   },
   "common": {
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "We could not find this page. Check the address and try again.",
+    "returnHome": "Return home",
     "skipToContent": "Skip to main content",
     "requestDemo": "Request a demo",
     "homeAriaLabel": "EduMoz, home page",
@@ -39,7 +42,11 @@
     "reportCards": "Report cards",
     "timetables": "Timetables",
     "myTimetable": "My timetable",
-    "finance": "Finance"
+    "finance": "Finance",
+    "users": "Users",
+    "password": "Password",
+    "staff": "Staff",
+    "sessions": "Sessions"
   },
   "home": {
     "badge": "Built for Mozambican schools",
@@ -146,7 +153,8 @@
     "genericError": "Could not save. Please try again.",
     "optional": "(optional)",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "endBeforeStart": "The end time must be later than the start time."
   },
   "auth": {
     "signIn": "Sign in",
@@ -155,14 +163,14 @@
     "signInSubtitle": "Use your school account.",
     "withGoogle": "Continue with Google",
     "or": "or",
-    "identifier": "Email or phone",
-    "identifierHint": "Students and guardians can use their phone number.",
+    "identifier": "Login code, email or mobile number",
+    "identifierHint": "Use the login code delivered by the school, or your account email or mobile number.",
     "password": "Password",
     "submit": "Sign in",
     "submitting": "Signing in…",
     "signOut": "Sign out",
     "failed": "Could not sign in. Check your details and try again.",
-    "noAccess": "This account has no access to any school. Ask school leadership for an invitation.",
+    "noAccess": "No access to this page in the selected school. Choose an authorized school or contact school leadership.",
     "school": "School",
     "changeSchool": "Change school"
   },
@@ -283,7 +291,7 @@
     "date": "Date",
     "emptySchedule": "You have no classes on this day.",
     "headTeacherView": "Class you direct",
-    "headTeacherReadOnlyNotice": "You're viewing this subject as the homeroom teacher — only the teacher of this subject can take attendance.",
+    "headTeacherReadOnlyNotice": "Read-only view. Only the teacher of this subject can take attendance.",
     "sessionStatus": {
       "submitted": "Submitted",
       "draft": "Unfinished",
@@ -312,7 +320,9 @@
     "errors": {
       "forbidden": "You don't have permission for this action",
       "invalid": "The submitted data is not valid",
-      "conflict": "This session was already changed by someone else. Please try again."
+      "conflict": "This session was already changed by someone else. Please try again.",
+      "submitted": "This session has already been submitted. Reopen it before making corrections.",
+      "alreadyOpen": "This session is already open."
     }
   },
   "settings": {
@@ -333,7 +343,7 @@
       "name": "Name",
       "description": "Description",
       "permissionCount": "Permissions",
-      "memberCount": "Members"
+      "memberCount": "Associations"
     },
     "create": {
       "trigger": "Create role",
@@ -355,7 +365,11 @@
       "report-cards": "Report cards",
       "academic-structure": "Academic structure",
       "teaching-staff": "Teachers",
-      "assessment-schemes": "Assessment schemes"
+      "assessment-schemes": "Assessment schemes",
+      "finance": "Finance",
+      "scheduling": "Timetables",
+      "users": "Users",
+      "school-staff": "Staff"
     },
     "actions": {
       "view": "View",
@@ -364,16 +378,185 @@
       "delete": "Delete"
     },
     "staffTitle": "Assign roles",
-    "staffSubtitle": "School managers — without an assigned role, they keep full access.",
-    "staffEmpty": "There are no managers in this school yet.",
+    "staffSubtitle": "Manager and teacher associations. Profiles complement the base role and respect personal ownership.",
+    "staffEmpty": "No staff associations match this search.",
     "restricted": "Restricted role",
     "unrestrictedBadge": "Full access",
     "unrestrictedOption": "Full access (unrestricted)",
     "errors": {
-      "name": "Enter a name for the role",
+      "name": "Enter a name of 3 to 120 characters containing a letter or number.",
       "membershipNotFound": "This manager no longer exists in this school",
       "roleNotFound": "This role no longer exists",
-      "assignFailed": "Could not assign the role"
+      "assignFailed": "Could not assign the role",
+      "duplicateName": "A role with this name already exists in this school.",
+      "requestChanged": "This request was already saved with different data. Close and check the list before creating another role.",
+      "invalid": "Review the role details.",
+      "createFailed": "Creation could not be confirmed. Retry with the same details or close and check the list.",
+      "notFound": "The role is not available in this school.",
+      "conflict": "The role changed. Close and review its details before saving.",
+      "protectedRole": "System roles cannot be deleted.",
+      "roleInUse": "This role has current or historical associations and cannot be deleted.",
+      "operationFailed": "The operation could not be confirmed. Please try again."
+    },
+    "manage": {
+      "actions": "Actions",
+      "system": "System",
+      "systemNote": "System role: its name and permissions can be adjusted; it cannot be deleted.",
+      "impact": "{count, plural, =0 {This role has no associations yet.} one {This role has # current or historical association.} other {This role has # current or historical associations.}}",
+      "loading": "Loading role…",
+      "noData": "The role could not be loaded.",
+      "uncertain": "The response did not arrive. Close and refresh the list to check the result before repeating.",
+      "edit": {
+        "button": "Edit",
+        "named": "Edit role {name}",
+        "title": "Edit role",
+        "description": "Review the name, description and granted access before saving.",
+        "confirm": "Save changes"
+      },
+      "delete": {
+        "button": "Delete",
+        "named": "Delete role {name}",
+        "title": "Delete role?",
+        "description": "Confirm the role name. Only unused custom roles can be deleted.",
+        "confirm": "Confirm deletion",
+        "effect": "The role and its grants will be deleted. Its audit record is preserved."
+      }
+    },
+    "levels": {
+      "named": "Access: {name}",
+      "none": "No access",
+      "read": "Read",
+      "write": "Write",
+      "custom": "Custom",
+      "details": "Detailed settings",
+      "pendingResource": "Administrative permissions for this resource are not yet available. Personal teaching work keeps its own rules.",
+      "pending": "Integration pending",
+      "legacyPending": "Previous configuration preserved; feature not yet available",
+      "consumerNotice": "Only supported actions are available. Previous settings for the others remain stored and do not activate unavailable features."
+    },
+    "systemRoles": {
+      "trigger": "Prepare system roles",
+      "title": "Prepare the nine system roles",
+      "description": "Adds missing roles for this school. Preserves changes to existing roles and does not assign people.",
+      "coverage": "Roles follow the available modules. Some functions depend on upcoming deliveries; personal access remains limited to the relevant person or class.",
+      "confirm": "Prepare roles",
+      "failed": "Preparation could not be confirmed. You can retry: existing changes will be preserved.",
+      "profiles": {
+        "direcao": {
+          "name": "Direction",
+          "description": "School management across the available modules."
+        },
+        "diretor_turma": {
+          "name": "Class Director",
+          "description": "Coordinates report cards, attendance and progress for the assigned class."
+        },
+        "professor": {
+          "name": "Teacher",
+          "description": "Own classes, grades, attendance and lesson records."
+        },
+        "secretaria": {
+          "name": "School Office",
+          "description": "Student records, enrolment and school documents."
+        },
+        "aluno": {
+          "name": "Student",
+          "description": "Own timetable, grades and school record."
+        },
+        "encarregado": {
+          "name": "Guardian",
+          "description": "The linked learner’s timetable, grades, attendance and account."
+        },
+        "coordenador_extracurricular": {
+          "name": "Extracurricular Coordinator",
+          "description": "Activities, groups, enrolment and extracurricular finances."
+        },
+        "professor_extracurricular": {
+          "name": "Activity Teacher",
+          "description": "Own activity groups, lessons, attendance and assessments."
+        },
+        "portaria": {
+          "name": "Gatehouse and Access",
+          "description": "School entrance and gatehouse attendance records."
+        }
+      }
+    },
+    "assignment": {
+      "named": "Manage roles for {name}",
+      "trigger": "Manage roles",
+      "title": "Roles for this school association",
+      "description": "Confirm the person, base role and profiles before saving. Identity and professional links are preserved.",
+      "loadFailed": "Roles could not be loaded. Close and try again.",
+      "searchFailed": "Roles could not be searched. Your current selection was preserved.",
+      "uncertain": "The response was not confirmed. Close and check the current state before making another change.",
+      "mode": "Access type",
+      "configured": "Selected profiles",
+      "legacy": "Full school access",
+      "legacyWarning": "This choice removes administrative restrictions from this association and allows management of every available school resource.",
+      "ownership": "Administrative profiles do not replace links to classes, teachers or learners.",
+      "selectedCount": "{count, plural, one {# selected profile} other {# selected profiles}} · maximum {maximum}",
+      "selected": "Selected profiles for this association",
+      "remove": "Remove {name} from the selection",
+      "empty": "No administrative profiles selected. This configuration does not restore full access.",
+      "search": "Search profiles",
+      "searching": "Searching…",
+      "searchButton": "Search",
+      "available": "Available profiles",
+      "select": "Select {name}",
+      "grantCount": "{count, plural, =0 {No stored permissions} one {# stored permission} other {# stored permissions}}",
+      "noMatches": "No profiles found.",
+      "pagination": "Available profile pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}",
+      "loading": "Loading association…",
+      "unavailable": "An editable association could not be loaded.",
+      "restoreLegacy": "Restore full access",
+      "save": "Save assignments",
+      "roleCount": "{count, plural, =0 {No administrative profiles} one {# profile} other {# profiles}}",
+      "currentUser": "Your account — self-management protected",
+      "staffSearch": "Search managers or teachers",
+      "staffPagination": "Staff association pages",
+      "unnamed": "Unnamed account · {code}",
+      "suspended": "Suspended association. Profiles are saved without restoring this association’s access.",
+      "suspendedBadge": "Suspended",
+      "disabledAccount": "This account is inactive. Assigning profiles does not activate it.",
+      "initialAccount": "The initial password change remains required. Assigning profiles does not remove this protection.",
+      "legacyOverridesWarning": "Account exceptions are preserved. Legacy inheritance does not remove denials or restore unrestricted policy management while active exceptions exist.",
+      "restoreLegacyInheritance": "Restore legacy inheritance"
+    },
+    "overrides": {
+      "trigger": "Exceptions",
+      "named": "Manage exceptions for {name}",
+      "title": "Exceptions for this school association",
+      "description": "Confirm the person and compare inheritance with effective access before saving.",
+      "unnamed": "Unnamed account · {code}",
+      "suspended": "Suspended association. Exceptions are prepared without activating access; they only affect authorisation after activation.",
+      "initialAccount": "The initial credential still requires replacement. These choices do not bypass secure account activation.",
+      "disabledAccount": "This account is inactive. Saving exceptions does not reactivate it.",
+      "ownership": "Controls administrative access in this school. It does not change teaching work in personal classes or family access to their own learners. A denial from another active association also takes precedence.",
+      "legacyWarning": "Any active exception removes unrestricted policy-management status, even when it repeats inheritance. Other inherited accesses are preserved.",
+      "legacyRestricted": "Legacy management with exceptions",
+      "badge": "{count, plural, one {# exception} other {# exceptions}}",
+      "search": "Search resource",
+      "count": "{count, plural, =0 {No exceptions for this association} one {# exception for this association} other {# exceptions for this association}}",
+      "level": "Level for {resource}",
+      "inherit": "Inherit from profiles",
+      "deny": "Deny",
+      "allow": "Allow",
+      "details": "View and adjust each action",
+      "inherited": "Inherited: {value}",
+      "choice": "Exception for {resource} — {action}",
+      "effective": "Expected result: {value}",
+      "permitted": "Allowed",
+      "denied": "Denied",
+      "otherDenial": "Another active association denies this action. Allowing it here does not override that denial.",
+      "reason": "Reason for {resource} — {action} (optional)",
+      "noMatches": "No resources match the search.",
+      "loading": "Loading inheritance and exceptions…",
+      "unavailable": "This association could not be loaded.",
+      "loadFailed": "Exceptions could not be loaded. Close and try again.",
+      "uncertain": "The save could not be confirmed. Close to refresh the state before making another change.",
+      "save": "Save exceptions"
     }
   },
   "academic": {
@@ -873,7 +1056,7 @@
       "tableTitle": "Payments for this invoice",
       "empty": "This invoice has no payments yet.",
       "fields": {
-        "amount": "Amount (MZN)",
+        "amount": "Amount ({currency})",
         "method": "Method",
         "provider": "Provider",
         "payerPhone": "Payer's phone number"
@@ -930,7 +1113,13 @@
         "nothingOwed": "This invoice has no outstanding balance",
         "paymentNotFound": "Payment not found",
         "cannotReverse": "Only a confirmed payment can be reversed",
-        "gatewayFailure": "Could not reach the operator. The request was already recorded — try confirming later."
+        "gatewayFailure": "Could not reach the operator. The request was already recorded — try confirming later.",
+        "idempotencyKey": "Invalid payment intent",
+        "intentConflict": "This intent was used with different details. Check existing payments before starting another.",
+        "paymentInProgress": "This invoice already has a pending mobile attempt. Check its status before starting another.",
+        "unsupportedCurrency": "This currency is not supported by the configured operator.",
+        "providerMismatch": "The operator reference does not match this payment.",
+        "retrySameIntent": "The response could not be confirmed. Retry without changing the details."
       }
     },
     "receipt": {
@@ -938,7 +1127,7 @@
       "printTrigger": "Print",
       "studentLabel": "Student",
       "invoiceLabel": "Invoice",
-      "amountLabel": "Amount",
+      "amountLabel": "Amount ({currency})",
       "methodLabel": "Method",
       "dateLabel": "Date",
       "statusLabel": "Status",
@@ -1149,7 +1338,9 @@
     "saving": "Saving…",
     "save": "Save",
     "errors": {
-      "invalid": "The submitted data is not valid"
+      "invalid": "The submitted data is not valid",
+      "termClosed": "This term is closed. Request authorized reopening before changing grades or assessments.",
+      "outOfRange": "A score exceeds the assessment maximum. No changes were saved."
     },
     "create": {
       "trigger": "New assessment",
@@ -1181,7 +1372,8 @@
       "notAdmittedToExam": "Not admitted to exam",
       "belowExamMinimum": "Below the minimum required in the exam",
       "noGradesAtAll": "No grades entered"
-    }
+    },
+    "termClosedNotice": "This term is closed. Grades are read-only until authorized reopening."
   },
   "termClosing": {
     "title": "Term closing",
@@ -1193,15 +1385,24 @@
     },
     "trigger": "Close",
     "confirmTitle": "Close {term}?",
-    "confirmDescription": "This calculates and saves the results for every subject and student this term. It cannot be reopened at this stage — make sure every grade has been entered.",
+    "confirmDescription": "This calculates and saves the results for all subjects and students in this term. Later changes require authorized reopening with a recorded reason.",
     "cancel": "Cancel",
     "closing": "Closing…",
     "confirm": "Close term",
     "errors": {
       "invalid": "The submitted data is not valid",
       "notFound": "Term not found",
-      "alreadyClosed": "This term is already closed"
-    }
+      "alreadyClosed": "This term is already closed",
+      "reason": "Enter a reason between 10 and 1000 characters",
+      "alreadyOpen": "This term is already open"
+    },
+    "reopenTrigger": "Reopen",
+    "reopenTitle": "Reopen {term}?",
+    "reopenDescription": "Report cards become unavailable until the next closing. Previous results remain preserved in the audit history.",
+    "reasonLabel": "Reason for reopening",
+    "reasonHint": "Explain the required correction (10 to 1000 characters). The reason and author are recorded.",
+    "reopening": "Reopening…",
+    "reopenConfirm": "Reopen term"
   },
   "reportCards": {
     "title": "Report cards",
@@ -1221,5 +1422,288 @@
     "pending": "Pending",
     "passed": "Passed",
     "failed": "Failed"
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Accounts, roles and access to the selected school.",
+    "columns": {
+      "name": "Name and codes",
+      "contact": "Contact details",
+      "roles": "School roles",
+      "links": "Linked profiles",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filters": {
+      "search": "Name, contact or code",
+      "role": "Role",
+      "status": "Status",
+      "link": "Linked profile"
+    },
+    "states": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "DISABLED": "Account disabled"
+    },
+    "links": {
+      "teacher": "Teacher",
+      "student": "Student",
+      "guardian": "Guardian",
+      "none": "No linked profile",
+      "staff": "Staff"
+    },
+    "anyRole": "All roles",
+    "anyStatus": "All statuses",
+    "anyLink": "All linked profiles",
+    "search": "Search",
+    "count": "{filtered, plural, one {# result} other {# results}} · {total, plural, one {# school account} other {# school accounts}}",
+    "schoolScope": "Activation and suspension affect this school only.",
+    "tableLabel": "School users",
+    "empty": "No accounts found",
+    "emptyHint": "Adjust the filters or search for another name.",
+    "unnamed": "Unnamed",
+    "noCode": "No profile code",
+    "noEmail": "No email",
+    "protected": "Protected account",
+    "unavailable": "Contact the administrator",
+    "suspend": "Suspend",
+    "activate": "Activate",
+    "suspendNamed": "Suspend {name}",
+    "activateNamed": "Activate {name}",
+    "confirmSuspend": "Suspend school access?",
+    "confirmActivate": "Activate school access?",
+    "confirmDescription": "This changes the school memberships of {name}. Records and access to other schools are preserved.",
+    "pagination": "User pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {total}",
+    "errors": {
+      "forbidden": "You do not have permission to manage these accounts.",
+      "invalid": "Check the details and try again.",
+      "notFound": "Account not found in this school.",
+      "protectedAccount": "This account is protected and cannot be changed here.",
+      "lastManager": "You cannot suspend the last unrestricted school manager.",
+      "disabledAccount": "This account is disabled. Contact the administrator.",
+      "creationUnavailable": "This could not be completed with these details. Check the account, contacts and teacher profile availability. Activated or shared accounts are not changed.",
+      "rateLimited": "Too many attempts. Wait 15 minutes before retrying.",
+      "schoolChanged": "The session school changed. Close the form and confirm the school before trying again.",
+      "editUnavailable": "This account cannot be edited here. School editing requires an exclusive, authorized account.",
+      "editConflict": "Details changed since opening. Close and reopen to review the current version before saving.",
+      "linkUnavailable": "This account or profile cannot be used for this operation. Confirm an active Teacher role and an available profile in this school.",
+      "linkConflict": "The link or profile changed. Close and reopen to review the current state before confirming.",
+      "staffLinkUnavailable": "This account or profile cannot be used for this operation. Confirm an active staff membership and an available profile in this school.",
+      "removalConflict": "The association changed. Close and review it before removing access.",
+      "removalUnavailable": "The removal could not be confirmed. Please try again."
+    },
+    "create": {
+      "trigger": "Create account",
+      "title": "New school account",
+      "description": "This form creates a new account. Linking an existing account requires confirmation by its holder.",
+      "name": "Full name",
+      "email": "Contact email (optional)",
+      "phone": "Contact mobile number (optional)",
+      "phoneHint": "Mozambican number: 84… or +25884…. Sign-in uses the account code.",
+      "roles": "School roles",
+      "teacherCode": "Teacher profile code (optional)",
+      "teacherHint": "The profile must belong to this school, be unlinked and have the Teacher role selected.",
+      "initialHint": "The login code and temporary password are generated after creation. The holder has 24 hours to replace the password before accessing the school.",
+      "submit": "Create and deliver credential",
+      "invalid": "Check the name, contacts and roles. Select Teacher when linking a teacher profile.",
+      "transport": "The result could not be confirmed. Check the list before creating another account; replaying this request cannot recover the credential.",
+      "deliveryTitle": "Deliver initial credential",
+      "deliveryDescription": "Deliver these details privately to the holder. The password will not be shown again after closing.",
+      "loginCode": "Login code",
+      "temporaryPassword": "Temporary password",
+      "expires": "Replace by {date}.",
+      "deliveryWarning": "The holder must always sign in with this code, replace the password and sign in again. Supplied email and mobile numbers are contacts; they do not identify another account. Do not share the credential through public channels.",
+      "done": "Complete delivery",
+      "alreadyCreated": "This request already completed. The delivered password cannot be recovered. Check the account in the list; if it has not been activated, you can issue a new credential.",
+      "backToList": "Back to list",
+      "reissueTrigger": "Reissue initial credential",
+      "reissueTitle": "New initial credential",
+      "reissueDescription": "Issuing a new credential for {name} invalidates the previous one and open sessions. This is allowed only before activation and for an account exclusive to this school.",
+      "reissueSubmit": "Reissue and deliver credential",
+      "reissueHint": "The login code stays the same. The new temporary password is valid for 24 hours and must be replaced before school access.",
+      "contactHint": "Communication contact. This account signs in with its delivered code."
+    },
+    "loginCodeLabel": "Login code",
+    "passwordPending": "Initial password must be replaced",
+    "edit": {
+      "button": "Edit",
+      "named": "Edit account for {name}",
+      "title": "Edit account details",
+      "description": "Correct the name and communication contacts of an account exclusive to this school.",
+      "loginPreserved": "These contacts are unverified and do not change the sign-in email, phone or code. Roles, links and credentials are preserved.",
+      "loading": "Checking account…",
+      "noData": "Close this window and confirm the account and school before trying again.",
+      "save": "Save changes",
+      "saved": "Details saved.",
+      "uncertain": "Could not confirm the save. Close this window and check the details before trying again."
+    },
+    "teacherLink": {
+      "button": "Teacher profile",
+      "named": "Manage teacher profile for {name}",
+      "title": "Teacher profile link",
+      "description": "Confirm the profile corresponding to {name} in this school.",
+      "loading": "Checking link…",
+      "unavailable": "Close this window and confirm the account and school before trying again.",
+      "current": "Current profile",
+      "after": "Profile after the change",
+      "none": "No linked profile",
+      "operation": "Operation",
+      "link": "Link or replace profile",
+      "unlink": "Unlink profile",
+      "code": "Teacher profile code",
+      "verify": "Verify profile",
+      "confirmLink": "Confirm link",
+      "confirmUnlink": "Confirm unlink",
+      "confirmHint": "Check the name and code. The account will use this profile for teacher access in this school.",
+      "unlinkHint": "The account will stop using this profile. The profile, lessons, grades and history are preserved.",
+      "roleRequired": "Linking requires an active Teacher role in this school. This form does not assign roles.",
+      "unchanged": "The selected profile is already linked. There are no changes to save.",
+      "back": "Back",
+      "saved": "Link updated.",
+      "uncertain": "Could not confirm the change. Close this window and check the current link before trying again."
+    },
+    "staffLink": {
+      "button": "Staff profile",
+      "named": "Manage staff profile for {name}",
+      "title": "Staff profile link",
+      "description": "Confirm the profile corresponding to {name} in this school.",
+      "loading": "Checking link…",
+      "unavailable": "Close this window and confirm the account and school before trying again.",
+      "current": "Current profile",
+      "after": "Profile after the change",
+      "none": "No linked profile",
+      "operation": "Operation",
+      "link": "Link or replace profile",
+      "unlink": "Unlink profile",
+      "code": "Staff profile code",
+      "verify": "Verify profile",
+      "confirmLink": "Confirm link",
+      "confirmUnlink": "Confirm unlink",
+      "confirmHint": "Check the name and code. The account will be linked to this professional profile in this school.",
+      "unlinkHint": "The account will stop using this staff profile. The profile, history and other professional links are preserved.",
+      "roleRequired": "Linking requires an active staff membership in this school. This form does not assign roles.",
+      "unchanged": "The selected profile is already linked. There are no changes to save.",
+      "back": "Back",
+      "saved": "Link updated.",
+      "uncertain": "Could not confirm the change. Close this window and check the current link before trying again."
+    },
+    "remove": {
+      "named": "Remove school association for {name}",
+      "button": "Remove association",
+      "title": "Remove this school association?",
+      "description": "This person will lose access to the selected school. Review the account before confirming.",
+      "preserved": "The global account, other schools and all profiles and academic/financial records are preserved. Rejoining requires a new authorized process.",
+      "confirm": "Confirm removal",
+      "uncertain": "The response did not arrive. Close and refresh the list to check the result before repeating."
+    }
+  },
+  "passwordChange": {
+    "title": "Password",
+    "subtitle": "Protect your account across all schools.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "policy": "Use 12 to 128 characters. A long phrase is welcome; spaces are preserved.",
+    "effect": "Changing your password ends all your sessions across all schools, including this one. You will need to sign in again.",
+    "google": "If you sign in only with Google and have no local password, manage your password in your Google account.",
+    "submit": "Change password",
+    "submitting": "Changing…",
+    "success": "Password changed.",
+    "signInAgain": "Previous sessions have been revoked. Sign in with your new password to continue.",
+    "signIn": "Sign in again",
+    "errors": {
+      "forbidden": "Your session is no longer valid. Sign in again.",
+      "invalid": "Use a new password of 12 to 128 characters and repeat it exactly in the confirmation.",
+      "currentPassword": "The current password could not be verified. If you use only Google, manage access in your Google account.",
+      "samePassword": "Choose a password different from your current one.",
+      "rateLimited": "Too many attempts. Wait 15 minutes and try again.",
+      "conflict": "The account changed during this request. Sign in again before retrying.",
+      "unavailable": "Your password could not be changed. Try again later.",
+      "transport": "The result could not be confirmed. Try signing in again; if the change completed, use your new password."
+    },
+    "initialRequired": "Before accessing the school, replace the temporary password with your own. Enter the delivered credential in Current password."
+  },
+  "staff": {
+    "title": "Staff",
+    "subtitle": "Professional profiles and duties in the selected school.",
+    "hint": "Professional profiles and account access are managed separately.",
+    "formHint": "Record professional details. This profile does not create an account or grant permissions.",
+    "create": "Add staff member",
+    "edit": "Edit",
+    "editNamed": "Edit profile for {name}",
+    "createTitle": "New staff profile",
+    "editTitle": "Edit staff profile",
+    "loading": "Loading…",
+    "contacts": "Contact details",
+    "status": "Status",
+    "account": "Account",
+    "linked": "Linked",
+    "notLinked": "Not linked",
+    "active": "Active",
+    "inactive": "Inactive",
+    "allStates": "All statuses",
+    "search": "Search",
+    "searchLabel": "Name, code, job or contact",
+    "count": "{count, plural, =0 {No profiles} one {# profile} other {# profiles}}",
+    "empty": "No profiles found",
+    "actions": "Actions",
+    "pagination": "Staff pages",
+    "page": "Page {page} of {total}",
+    "previous": "Previous",
+    "next": "Next",
+    "unspecified": "Not specified",
+    "male": "Male",
+    "female": "Female",
+    "uncertain": "Could not confirm the save. Check the details before retrying; the same request does not create another profile.",
+    "fields": {
+      "code": "Code",
+      "name": "Full name",
+      "jobTitle": "Professional role",
+      "title": "Title",
+      "email": "Contact email",
+      "phone": "Phone",
+      "birthDate": "Date of birth",
+      "gender": "Sex",
+      "documentNumber": "Document number",
+      "nuit": "Tax number (NUIT)",
+      "address": "Address",
+      "qualification": "Qualification",
+      "contractType": "Contract type",
+      "hireDate": "Hire date",
+      "notes": "Notes",
+      "isActive": "Active profile"
+    },
+    "errors": {
+      "forbidden": "You do not have permission to manage these profiles.",
+      "invalid": "Check the profile fields.",
+      "unavailable": "This profile cannot be accessed or saved.",
+      "conflict": "The profile changed. Close and reopen to review the current details.",
+      "duplicateCode": "This code is already used in this school.",
+      "schoolChanged": "The session school changed. Close the form and confirm the school before trying again.",
+      "requestChanged": "This request was already saved with different details. Close and check the profile before editing."
+    }
+  },
+  "sessions": {
+    "title": "Account sessions",
+    "subtitle": "Control where your account remains signed in.",
+    "scope": "These controls belong to your account across all schools. Other sessions will be refused on their next request.",
+    "endOthers": "End other sessions",
+    "confirmTitle": "End session?",
+    "confirmDescription": "Your current session will remain active. The other session will need to sign in again.",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "working": "Ending…",
+    "error": "The operation could not be confirmed. Please try again.",
+    "success": "Sessions ended.",
+    "current": "This session",
+    "other": "Another session",
+    "created": "Signed in: {date}",
+    "seen": "Last activity: {date}",
+    "end": "End session",
+    "currentBadge": "In use",
+    "limit": "Up to 25 active sessions, in Mozambique time. Activity is updated every five minutes."
   }
 }

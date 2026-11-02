@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import type { DefaultValues } from "react-hook-form";
 
@@ -26,10 +27,12 @@ import {
 import { GenerateInvoicesForm } from "@/features/finance/ui/generate-invoices-form";
 import { PaymentManager } from "@/features/finance/ui/payment-manager";
 import { EntitySection } from "@/features/academic/ui/settings/entity-section";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { FeeRecurrence } from "@/types";
 
 interface FinancePanelProps {
+  readonly canCreate?: boolean;
+  readonly canEdit?: boolean;
   readonly feeSchedules: { readonly rows: readonly FeeScheduleRow[]; readonly academicYear: string | null };
   readonly feeItems: { readonly rows: readonly FeeItemRow[]; readonly academicYear: string | null };
   readonly options: FeeScheduleOptions;
@@ -50,6 +53,8 @@ const INVOICE_STATUS_TONE: Record<string, "neutral" | "warning" | "destructive" 
 };
 
 export function FinancePanel({
+  canCreate = true,
+  canEdit = true,
   feeSchedules,
   feeItems,
   options,
@@ -61,7 +66,15 @@ export function FinancePanel({
   initialTab,
 }: FinancePanelProps) {
   const t = useTranslations("finance");
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const tCommon = useTranslations("common");
+  const tForm = useTranslations("form");
+  const financeQuery = {
+    turma: debtReportQuery.classGroupId,
+    periodYear: debtReportQuery.periodYear,
+    periodMonth: debtReportQuery.periodMonth,
+  };
 
   const feeScheduleColumns = useMemo<DataTableColumn<FeeScheduleRow>[]>(
     () => [
@@ -154,7 +167,14 @@ export function FinancePanel({
   ];
 
   return (
-    <Tabs defaultValue={initialTab}>
+    <Tabs
+      key={initialTab}
+      defaultValue={initialTab}
+      onValueChange={(tab) => router.replace({
+        pathname: "/finance",
+        query: { ...Object.fromEntries(searchParams), tab },
+      }, { scroll: false })}
+    >
       <TabsList>
         <TabsTrigger value="feeSchedules">{t("tabs.feeSchedules")}</TabsTrigger>
         <TabsTrigger value="feeItems">{t("tabs.feeItems")}</TabsTrigger>
@@ -164,6 +184,7 @@ export function FinancePanel({
 
       <TabsContent value="feeSchedules">
         <EntitySection<FeeScheduleRow, CreateFeeScheduleInput>
+          canCreate={canCreate}
           subtitle={t("feeSchedules.subtitle")}
           tableLabel={t("feeSchedules.tableLabel")}
           columns={feeScheduleColumns}
@@ -183,6 +204,7 @@ export function FinancePanel({
 
       <TabsContent value="feeItems">
         <EntitySection<FeeItemRow, CreateFeeItemInput>
+          canCreate={canCreate}
           subtitle={t("feeItems.subtitle")}
           tableLabel={t("feeItems.tableLabel")}
           columns={feeItemColumns}
@@ -211,9 +233,9 @@ export function FinancePanel({
 
       <TabsContent value="invoicing">
         <div className="flex flex-col gap-6">
-          <section className="rounded-lg border border-border bg-surface p-4 sm:p-6">
+          {canCreate ? <section className="rounded-lg border border-border bg-surface p-4 sm:p-6">
             <GenerateInvoicesForm feeSchedules={options.feeSchedules} />
-          </section>
+          </section> : null}
 
           <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-6">
             <h3 className="text-lg font-semibold">{t("invoicing.debtReportTitle")}</h3>
@@ -231,7 +253,7 @@ export function FinancePanel({
                   defaultValue={debtReportQuery.classGroupId}
                   className="h-12 min-w-48 rounded-md border border-border-strong bg-surface px-4 text-base text-foreground"
                 >
-                  <option value="">{tCommon("selectPlaceholder")}</option>
+                  <option value="">{tForm("selectPlaceholder")}</option>
                   {debtReportFilters.classGroups.map((group) => (
                     <option key={group.id} value={group.id}>
                       {group.name}
@@ -300,7 +322,7 @@ export function FinancePanel({
                           <Link
                             href={{
                               pathname: "/finance",
-                              query: { ...debtReportQuery, tab: "invoicing", conta: row.enrollmentId },
+                              query: { ...financeQuery, tab: "invoicing", conta: row.enrollmentId },
                             }}
                             className="underline decoration-dotted underline-offset-4 hover:text-accent"
                           >
@@ -315,7 +337,7 @@ export function FinancePanel({
                         </td>
                         <td className="px-4 py-3">
                           <Link
-                            href={{ pathname: "/finance", query: { tab: "payments", factura: row.invoiceId } }}
+                            href={{ pathname: "/finance", query: { ...financeQuery, tab: "payments", factura: row.invoiceId } }}
                             className="underline decoration-dotted underline-offset-4 hover:text-accent"
                           >
                             {t("payments.manageTrigger")}
@@ -363,7 +385,7 @@ export function FinancePanel({
                           </td>
                           <td className="px-4 py-3">
                             <Link
-                              href={{ pathname: "/finance", query: { tab: "payments", factura: invoice.id } }}
+                              href={{ pathname: "/finance", query: { ...financeQuery, conta: studentAccount.enrollmentId, tab: "payments", factura: invoice.id } }}
                               className="underline decoration-dotted underline-offset-4 hover:text-accent"
                             >
                               {t("payments.manageTrigger")}
@@ -382,7 +404,7 @@ export function FinancePanel({
 
       <TabsContent value="payments">
         {invoiceForPayment ? (
-          <PaymentManager invoice={invoiceForPayment} />
+          <PaymentManager key={invoiceForPayment.id} invoice={invoiceForPayment} canCreate={canCreate} canEdit={canEdit} />
         ) : (
           <p className="rounded-lg border border-border bg-surface p-6 text-sm text-muted-foreground">
             {t("payments.selectInvoiceHint")}

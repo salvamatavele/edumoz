@@ -1,0 +1,754 @@
+{
+  "sourceRoot": "/home/salvado/Projects/DEV/nextjs/esagrada-next",
+  "baseCommit": "941061c870463883f341acbd16e09d5d6c03e381",
+  "note": "Working tree hashes; static inventory does not mean every branch has been exercised. Source remains read-only.",
+  "files": [
+    {
+      "path": "openspec/specs/autenticacao-e-permissoes.md",
+      "sha256": "9455a3744765a8a983969d35593b1fe8dfedb927663cb892a7ee1ae7c1ed3a28",
+      "lines": 253,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "openspec/specs/paineis-por-perfil.md",
+      "sha256": "8431afb90ebc65a278041d0887256d3950639a4479a9cb74320d535630ac9c82",
+      "lines": 191,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(app)/admin/auditoria/page.tsx",
+      "sha256": "ba72cfee71c490e7617c44b5538bea2e0f47ed2b3025bce2bf1524db8a91cc5a",
+      "lines": 199,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(app)/admin/permissoes/page.tsx",
+      "sha256": "d96df4b55077b292a91715ec63787bcc249dd461087225bad7a7b05b59ce5c3a",
+      "lines": 316,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(app)/admin/utilizadores/page.tsx",
+      "sha256": "a9791a2e80af79a81cbc5cb2eccaf87664942346ab567193982b045e4f2c92b4",
+      "lines": 344,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(app)/credenciais/page.tsx",
+      "sha256": "f76257c3e1dd660a3a58c4e4dc623756c3adfe96b1aa6ca4ac5fda729ccba7a5",
+      "lines": 268,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(app)/perfil/page.tsx",
+      "sha256": "0f52c4ca06933e4dc22b12c98d07441f1f6a8fe5177d4dc82d5d32840a7110ae",
+      "lines": 232,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(auth)/entrar/qr/page.tsx",
+      "sha256": "2126747d3a0a3809db60203a10da53d1c4ca4ca80e082b2c3ee092d2f7618f1e",
+      "lines": 28,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(auth)/login/page.tsx",
+      "sha256": "eedeb5310384933b456404096d7aa67420697f7b1ff788073fd26ec76488445b",
+      "lines": 76,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(auth)/recuperar/page.tsx",
+      "sha256": "3d05e00cf5c5a3885b86dca70d7f6d04625eefaaa7e456d9cb3009e266d22507",
+      "lines": 35,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/(auth)/redefinir/page.tsx",
+      "sha256": "a61c56d97c8e5b0833d211ea29fe586204cf68ea9b0ac293a71e6639a7023e15",
+      "lines": 49,
+      "exports": [
+        "metadata"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/app/api/auth/[...all]/route.ts",
+      "sha256": "cb89cea80de38bf54c47b99dbe5ebc8079cd914d40ebee3ff5c63e29e0b1c56d",
+      "lines": 5,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "src/app/api/exportar/auditoria/route.ts",
+      "sha256": "e7203a0cba86814b59558a72e5cd463c8b73d63ee3dc751cde44f594c178e3d8",
+      "lines": 28,
+      "exports": [
+        "GET"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/administration.ts",
+      "sha256": "ce7031441bc4d3528246d8d1d104380ebe0c696b382186958f5bea927059dfd7",
+      "lines": 1069,
+      "exports": [
+        "FiltrosDeUtilizadores",
+        "listUsers",
+        "PermissionMatrix",
+        "getPermissionMatrix",
+        "createRole",
+        "renameRole",
+        "deleteRole",
+        "setRolePermission",
+        "getUserPermissions",
+        "setUserPermission",
+        "CreateUserInput",
+        "createUserAccount",
+        "resetUserPassword",
+        "setUserActive",
+        "deleteUserAccount",
+        "updateUserAccount",
+        "setUserLinks",
+        "setUserRoles",
+        "listStaffWithoutAccount",
+        "listTeachersWithoutAccount"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/audit-log.ts",
+      "sha256": "adabcb626f2953ad19c5060d77e2294deac34d6933d3ef81176064d71963bca9",
+      "lines": 128,
+      "exports": [
+        "AUDIT_ACTIONS",
+        "actionLabel",
+        "AuditRecord",
+        "AuditPage",
+        "getAuditLog"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/authorization.ts",
+      "sha256": "9bfe76ce6ba653a5faa59a883566abfce66ee9ce2618fa77f98ecd48ea1c77c3",
+      "lines": 268,
+      "exports": [
+        "Viewer",
+        "getViewer",
+        "permissoesDaConta",
+        "requireViewer",
+        "requirePermission",
+        "requirePagePermission",
+        "comoRecusa",
+        "viewerCan"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/can-open.ts",
+      "sha256": "0863a5f6071bda0538988443a86a7a24c8a724fbdf2811d622f3f5246f04094c",
+      "lines": 25,
+      "exports": [
+        "podeAbrir"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/credential-emails.ts",
+      "sha256": "bd5698af7546fc1805643e3fa77160eaa0ae62bcafe671da449dc7540c4f267e",
+      "lines": 144,
+      "exports": [
+        "EstadoDoEnvio",
+        "Credencial",
+        "enviarCredencial"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/credentials.ts",
+      "sha256": "ed66eb00c1589401dff5899664bc4575f7088b55dba47423923044b9398de348",
+      "lines": 571,
+      "exports": [
+        "PerfilCredencial",
+        "CredentialRow",
+        "CredentialsView",
+        "listCredentials",
+        "createMissingAccounts",
+        "createOneAccount",
+        "resetCredential",
+        "previewInitialPassword"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/login-resolution.ts",
+      "sha256": "ad7309bff18f70a0dc1fb0ebd3b2809c64985ac87d2af2b37f67930f1efc76d3",
+      "lines": 183,
+      "exports": [
+        "resolveLoginEmail"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/profile.ts",
+      "sha256": "1a200f6844df682a58ec5b40dccc45a528d7c05fe3a3bbcdc858b88b0a0c7ad6",
+      "lines": 352,
+      "exports": [
+        "Profile",
+        "getProfile",
+        "changeOwnPassword",
+        "escolherCategoriaDePonto"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/qr-credentials.ts",
+      "sha256": "5fc57bdcadc9733b4fe90ddd2a7ef323244c3c15b3c3461447a5ece89d0cbab9",
+      "lines": 303,
+      "exports": [
+        "QrEmitido",
+        "issueQrCredential",
+        "SegredoDeCartao",
+        "issueCardSecrets",
+        "revokeQrCredential",
+        "setSchoolQrLogin"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/application/school-accounts.ts",
+      "sha256": "e226a459d354e8952b017c6ff72c37509a8d0071bddb84adec117668b61e9439",
+      "lines": 378,
+      "exports": [
+        "AccountResult",
+        "StudentAccounts",
+        "ensureStudentAccounts",
+        "ensureStaffAccount",
+        "ensureTeacherAccount",
+        "resetToInitialPassword"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/access-level.ts",
+      "sha256": "578c99dbd97f5155b6e1f77871ba5eafd97b991370ab611687bd5ad6c52917f1",
+      "lines": 27,
+      "exports": [
+        "ACCESS_LEVELS",
+        "AccessLevel",
+        "rankOf",
+        "highest",
+        "satisfies"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/account-identity.ts",
+      "sha256": "cb65699d4cb66b02e11d95110ee4b7ddb365c948acd6907fbe9a23a612994fcd",
+      "lines": 150,
+      "exports": [
+        "PERFIS",
+        "Perfil",
+        "isInternalEmail",
+        "internalEmail",
+        "IdentifierKind",
+        "identifierKind",
+        "normalizePhone",
+        "MIN_PASSWORD",
+        "SUFIXO_CURTO",
+        "initialPassword",
+        "explicaPasswordInicial",
+        "guardianCode",
+        "MIN_DIGITOS_TELEFONE",
+        "phoneKey",
+        "uniquePhoneMatch"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/effective-permissions.ts",
+      "sha256": "83721e3cd8521a581d0abf4708528021164dd6abfb426249d12655278d29018c",
+      "lines": 77,
+      "exports": [
+        "PermissionGrant",
+        "PermissionResolutionInput",
+        "EffectivePermissions"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/navigation.ts",
+      "sha256": "81e4f715d9a6f11277e7ac21c3fdb5c3d6f91620625b3ea509dc033e36b6203d",
+      "lines": 618,
+      "exports": [
+        "NavItem",
+        "NavGroup",
+        "NAVIGATION",
+        "MOBILE_PRIORITY",
+        "mobileNavigation",
+        "visibleNavigation",
+        "activeHref",
+        "allHrefs"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/permission-catalogue.ts",
+      "sha256": "74388ff3a13704767ebac990bb48d9bf740b9f2d2eebfdf034187888790e09e8",
+      "lines": 445,
+      "exports": [
+        "PermissionDefinition",
+        "PermissionGroup",
+        "PERMISSION_CATALOGUE",
+        "PermissionKey",
+        "ALL_PERMISSIONS",
+        "ALL_PERMISSION_KEYS",
+        "isPermissionKey"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/qr-token.ts",
+      "sha256": "184991726dbfba7c7ee35d1a18afd148cf1ce5a1eb20775ef8fae60069a4ea99",
+      "lines": 123,
+      "exports": [
+        "COMPRIMENTO_TOKEN",
+        "COMPRIMENTO_TOKEN_ANTIGO",
+        "isQrToken",
+        "CAMINHO_QR",
+        "CAMINHO_QR_ANTIGO",
+        "qrUrl",
+        "tokenDoFragmento",
+        "tokenDoQrLido",
+        "ehSoLocal"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/rasto.ts",
+      "sha256": "3f265a605ac569ef72e32b163f74d23dfd79df74fc21587a74c068328ddc534d",
+      "lines": 230,
+      "exports": [
+        "ROTULOS_DE_ROTA",
+        "rotaDoEndereco",
+        "DegrauDoRasto",
+        "construirRasto",
+        "degrauDeCima"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/role-catalogue.ts",
+      "sha256": "3a78909b7ced5811661fb25474bc1d8437a665e04f24a015c3c6462e3a91a6fd",
+      "lines": 270,
+      "exports": [
+        "RoleDefinition",
+        "SYSTEM_ROLES",
+        "SystemRoleKey"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/domain/route-permissions.ts",
+      "sha256": "97b1ecc332371fe85114363748f3b52ab61cee8d0d00632b8e28127271e7330c",
+      "lines": 213,
+      "exports": [
+        "ROUTE_PERMISSIONS",
+        "ROTAS_PUBLICAS",
+        "permissaoDaRota"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/infrastructure/auth-client.ts",
+      "sha256": "010f350164b724543d9daa9b858190cfc72a0056379ee06a9d9ee0fc9ab44ba3",
+      "lines": 15,
+      "exports": [
+        "authClient"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/infrastructure/auth.ts",
+      "sha256": "ab0f706886c3ad2dba346efd3a2ff5970e65a1bb112e86dad45e8ab743549166",
+      "lines": 115,
+      "exports": [
+        "auth",
+        "Auth"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/infrastructure/qr-login-plugin.ts",
+      "sha256": "4c479145eac4622873044bdfe26bde483bda6cc1a1162b79b6f25f711c4b26dd",
+      "lines": 104,
+      "exports": [
+        "qrLogin"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/infrastructure/qr-token.ts",
+      "sha256": "86220384f1093868097d9de0e61e8d2b9439a7e433b6c8a6cc1f88d69f99cceb",
+      "lines": 50,
+      "exports": [
+        "gerarQrToken",
+        "hashQrToken",
+        "mesmoHash",
+        "selarQrToken",
+        "abrirQrToken"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/admin-actions.ts",
+      "sha256": "84d452e09ffaf01236320cf37b4fabe4331844f22937eb640057360923447f90",
+      "lines": 362,
+      "exports": [
+        "AdminState",
+        "setRolePermissionAction",
+        "setUserPermissionAction",
+        "createUserAction",
+        "resetPasswordAction",
+        "setUserActiveAction",
+        "deleteUserAccountAction",
+        "setUserRolesAction",
+        "createRoleAction",
+        "renameRoleAction",
+        "deleteRoleAction",
+        "updateUserAction"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/app-sidebar.tsx",
+      "sha256": "9c5308a4b34a74ede75d0709a32af5448dd650c40411441b1ce3c770d4401715",
+      "lines": 163,
+      "exports": [
+        "AppSidebar"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/auth-actions.ts",
+      "sha256": "04b4ef5b5fa0a7ca3d0a4d6a8d62f4fe21d6bc0b3262f463c9a1c11a0fc0ecf5",
+      "lines": 98,
+      "exports": [
+        "LoginState",
+        "loginAction",
+        "logoutAction"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/card-login.tsx",
+      "sha256": "f6221548671e89092c3277f7dadca51c153e2e2dc6e94eef60173161d40504d2",
+      "lines": 141,
+      "exports": [
+        "CardLogin"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/categoria-ponto-form.tsx",
+      "sha256": "26ded5bb76b7ee3f73b5e29cf122bdb711782ec64c18bb3c7754c3aebcb52eb9",
+      "lines": 71,
+      "exports": [
+        "CategoriaDePontoForm"
+      ],
+      "formNames": [
+        "categoria"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/credential-actions.ts",
+      "sha256": "33d1015b86b6136e978664829284f086ba7c0907a7dd4ecc3f222d74cc38f010",
+      "lines": 88,
+      "exports": [
+        "CredentialState",
+        "createMissingAccountsAction",
+        "createOneAccountAction",
+        "resetCredentialAction"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/credential-forms.tsx",
+      "sha256": "412b3a5d52f1c4714ed95eeb81a2cd4de4bbbd2a80edab6a9e6d04d1365a987d",
+      "lines": 337,
+      "exports": [
+        "CreateMissingDialog",
+        "CreateOneButton",
+        "ResetButton"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/level-select.tsx",
+      "sha256": "aaee4008e0fd1977914048590ce286642756c0802a60b3ad362d37ba532a90c6",
+      "lines": 141,
+      "exports": [
+        "RoleLevelSelect",
+        "UserLevelSelect"
+      ],
+      "formNames": [
+        "level",
+        "permissionId",
+        "roleId",
+        "userId"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/link-permitido.tsx",
+      "sha256": "91d01b5c5f4c11a87e22a04935649669cd4fcbed44e87c3a93ea3b8cac573258",
+      "lines": 29,
+      "exports": [
+        "BotaoSePuder"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/login-form.tsx",
+      "sha256": "7488736b195f04c22d7816d8f0ad471837ce4b3bd0a62502b838f58777945224",
+      "lines": 182,
+      "exports": [
+        "LoginForm"
+      ],
+      "formNames": [
+        "identificador",
+        "password",
+        "perfil"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/mobile-nav.tsx",
+      "sha256": "9005b06692c5701c3d110bcd41a5d8d0646b8b684c95cbc1e7444fab723669e5",
+      "lines": 78,
+      "exports": [
+        "MobileNav"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/my-qr.tsx",
+      "sha256": "3a3623c3b4b48dc6a166839c2dda32e2e56b262c42690dfc690e10ca74fe2ad1",
+      "lines": 72,
+      "exports": [
+        "MyQr"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/password-form.tsx",
+      "sha256": "56263ee6bfc86e8ce39360d09e7e7dfe6e0b90fd350f33472d6b2095b9a16ea6",
+      "lines": 91,
+      "exports": [
+        "PasswordForm"
+      ],
+      "formNames": [
+        "actual",
+        "confirmacao",
+        "nova"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/profile-actions.ts",
+      "sha256": "4a507f893f30572bbdc9bfbbe6c5bbaecbc1fe1383547f21eed6065504c9698a",
+      "lines": 62,
+      "exports": [
+        "PasswordState",
+        "changePasswordAction",
+        "CategoriaState",
+        "escolherCategoriaAction"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/qr-actions.ts",
+      "sha256": "148627ce4b38a3a262d6ba6f7c26a7461a9b2cd1acaf35e37e5e39a37433bc8c",
+      "lines": 128,
+      "exports": [
+        "QrState",
+        "issueQrAction",
+        "revokeQrAction",
+        "setSchoolQrLoginAction",
+        "CardSecretsState",
+        "issueCardSecretsAction"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/qr-entry.tsx",
+      "sha256": "e0ea2874ea467ca50a805c6ca86ea02e85af0e02cffcab7adeb5ea40c0dfc5ba",
+      "lines": 86,
+      "exports": [
+        "QrEntry"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/qr-forms.tsx",
+      "sha256": "b2ae2e042ca6adcfec74e68038f47a3db8c77a5463e34c02fd07ea38e615ecd4",
+      "lines": 220,
+      "exports": [
+        "IssueQrDialog",
+        "RevokeQrButton",
+        "SchoolQrToggle"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/recuperar-actions.ts",
+      "sha256": "fccd13ac33240e7b0b8ea2be15373973f080984ab88b5e5cd6b7d620aed5fd48",
+      "lines": 116,
+      "exports": [
+        "RecuperarState",
+        "pedirReposicao",
+        "concluirReposicao"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "src/modules/identity/presentation/recuperar-forms.tsx",
+      "sha256": "67787e837d4ac4823556190c4640ca4885b22327463ad52c7abf83f9128ba78a",
+      "lines": 137,
+      "exports": [
+        "PedirReposicaoForm",
+        "RedefinirForm"
+      ],
+      "formNames": [
+        "identificador",
+        "password",
+        "repetida",
+        "token"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/role-dialogs.tsx",
+      "sha256": "b752c6bfdf2f088a160b490df9429b2f10de9abddd1d40614183ca40033b5134",
+      "lines": 262,
+      "exports": [
+        "CreateRoleDialog",
+        "RenameRoleDialog",
+        "DeleteRoleButton"
+      ],
+      "formNames": [
+        "description",
+        "label",
+        "roleId"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/user-dialogs.tsx",
+      "sha256": "950ab0703b56faa716a391122caab45ad5fdce44f16cbcc5a168d4a7b0ff0311",
+      "lines": 662,
+      "exports": [
+        "RoleOption",
+        "TeacherOption",
+        "StaffOption",
+        "CreateUserDialog",
+        "ResetPasswordDialog",
+        "EditRolesDialog",
+        "ToggleActiveButton",
+        "DeleteUserButton",
+        "EditUserDialog"
+      ],
+      "formNames": [
+        "acao",
+        "email",
+        "name",
+        "password",
+        "phone",
+        "roleIds",
+        "staffId",
+        "teacherId",
+        "userId"
+      ]
+    },
+    {
+      "path": "src/modules/identity/presentation/user-menu.tsx",
+      "sha256": "9df9c69a8d2882208dc3877082a4b063edb590e04ffddd5b2f01a9a7c2b229e7",
+      "lines": 119,
+      "exports": [
+        "UserMenu"
+      ],
+      "formNames": []
+    },
+    {
+      "path": "tests/integration/permissions-db.test.ts",
+      "sha256": "202fc3cf67df6814b43dd2b758cf60789d558a7fb7670eab3d5a6de8dda807d0",
+      "lines": 192,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "tests/unit/account-identity.test.ts",
+      "sha256": "69fa35690a72243d89a30eff4d9b4a595c1dfc127c4679723976d093295bab10",
+      "lines": 150,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "tests/unit/effective-permissions.test.ts",
+      "sha256": "e12136e50e5d8aa588f76b77a121207028de74c237fe988d5126f9daae04047e",
+      "lines": 114,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "tests/unit/permission-catalogue.test.ts",
+      "sha256": "b2f9d5537bb26449f146736c7a908cdc3807fa5accb696f94a402448e3f81201",
+      "lines": 101,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "tests/unit/qr-origin.test.ts",
+      "sha256": "9addeed80fdcd2d553454466957c83829998d39dfccf40979db9fb3468637052",
+      "lines": 22,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "tests/unit/qr-token.test.ts",
+      "sha256": "3d8914fa5bba6b487d7586f75694f9b4b8f40fa61b61de293b335e9a31a5946b",
+      "lines": 116,
+      "exports": [],
+      "formNames": []
+    },
+    {
+      "path": "tests/unit/route-permissions.test.ts",
+      "sha256": "3e14225f9ed0aa58b01340f3ae6888e1c1916ef36bff1f7a9002f76a9e6a0877",
+      "lines": 123,
+      "exports": [],
+      "formNames": []
+    }
+  ]
+}

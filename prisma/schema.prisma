@@ -44,6 +44,7 @@ enum Role {
 enum MembershipStatus {
   ACTIVE
   SUSPENDED
+  REMOVED
 }
 
 enum InvitationStatus {
@@ -84,6 +85,8 @@ model School {
   currency      String  @default("MZN")
   isActive      Boolean @default(true)
 
+  invoiceSequence Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -91,6 +94,7 @@ model School {
   invitations        Invitation[]
   students           Student[]
   guardians          Guardian[]
+  staffProfiles Staff[]
   teachers           Teacher[]
   academicYears      AcademicYear[]
   terms              Term[]
@@ -134,6 +138,17 @@ model User {
   phone        String? @unique
   /// Argon2id. Nulo quando o utilizador só entra por Google.
   passwordHash String?
+  /// Incremented on credential changes; old JWTs cannot renew their version.
+  authVersion Int @default(0)
+  /// Generated account identifier, distinct from public school profile codes.
+  loginCode String? @unique @db.VarChar(64)
+  /// Unverified communication contacts; never authentication identifiers or account-link evidence.
+  contactEmail String? @db.VarChar(254)
+  contactPhone String?
+  passwordChangeRequired Boolean @default(false)
+  passwordExpiresAt DateTime?
+  /// Hashed school/actor/request identity; never a credential or raw request payload.
+  creationKey String? @unique @db.Char(64)
 
   isPlatformAdmin Boolean   @default(false)
   isActive        Boolean   @default(true)
@@ -144,11 +159,13 @@ model User {
 
   accounts            Account[]
   sessions            Session[]
+  authSessions        AuthSession[]
   memberships         Membership[]
   invitationsSent     Invitation[] @relation("InvitationInvitedBy")
   invitationsAccepted Invitation[] @relation("InvitationAcceptedBy")
   studentProfiles     Student[]
   guardianProfiles    Guardian[]
+  staffProfiles Staff[]
   teacherProfiles     Teacher[]
 }
 
@@ -189,6 +206,21 @@ model Session {
   @@index([userId])
 }
 
+/// Revocation registry for signed JWTs; id is a keyed digest, never a bearer token.
+model AuthSession {
+  id String @id @db.Char(64)
+  userId String
+  authVersion Int
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
 model VerificationToken {
   identifier String
   token      String
@@ -212,13 +244,17 @@ model Membership {
   /// comportamento de sempre) — atribuir um papel é uma restrição opcional, nunca
   /// obrigatória. Só faz sentido em memberships com role: SCHOOL_MANAGER.
   permissionRoleId String?
+  // Explicit restrictions remain restrictive even when no profiles are assigned.
+  permissionsConfigured Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   school         School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  permissionRole PermissionRole? @relation(fields: [permissionRoleId], references: [id])
+  permissionRole PermissionRole? @relation(fields: [permissionRoleId], references: [id], onDelete: Restrict)
+  assignedRoles MembershipPermissionRole[]
+  permissionOverrides MembershipPermissionOverride[]
 
   @@unique([userId, schoolId, role])
   @@index([schoolId, role])
@@ -240,6 +276,7 @@ model Permission {
   action   String
 
   roles RolePermission[]
+  membershipOverrides MembershipPermissionOverride[]
 
   @@unique([resource, action])
 }
@@ -250,6 +287,10 @@ model PermissionRole {
   id       String @id @default(cuid())
   schoolId String
 
+  key String? @db.VarChar(100)
+  isSystem Boolean @default(false)
+  sortOrder Int @default(1000)
+
   name        String
   description String?
 
@@ -259,8 +300,24 @@ model PermissionRole {
   school      School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
   memberships Membership[]
+  assignments MembershipPermissionRole[]
 
   @@unique([schoolId, name])
+  @@unique([schoolId, key])
+  @@index([schoolId, sortOrder, name, id])
+}
+
+// A functional profile is scoped through its school association, including retained history.
+model MembershipPermissionRole {
+  membershipId String
+  permissionRoleId String
+  createdAt DateTime @default(now())
+
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  permissionRole PermissionRole @relation(fields: [permissionRoleId], references: [id], onDelete: Restrict)
+
+  @@id([membershipId, permissionRoleId])
+  @@index([permissionRoleId])
 }
 
 model RolePermission {
@@ -271,6 +328,23 @@ model RolePermission {
   permission Permission     @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+// An exception belongs to one school association; removing it restores inheritance.
+model MembershipPermissionOverride {
+  id String @id @default(cuid())
+  membershipId String
+  permissionId String
+  allowed Boolean
+  reason String? @db.VarChar(300)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@unique([membershipId, permissionId])
   @@index([permissionId])
 }
 
@@ -407,6 +481,36 @@ model StudentGuardian {
   @@index([guardianId])
 }
 
+
+model Staff {
+  id String @id @default(cuid())
+  schoolId String
+  userId String?
+  code String @db.VarChar(64)
+  name String @db.VarChar(191)
+  jobTitle String @db.VarChar(191)
+  title String? @db.VarChar(64)
+  email String? @db.VarChar(254)
+  phone String? @db.VarChar(40)
+  birthDate DateTime? @db.Date
+  gender Gender?
+  documentNumber String? @db.VarChar(64)
+  nuit String? @db.VarChar(32)
+  address String? @db.Text
+  qualification String? @db.VarChar(191)
+  contractType String? @db.VarChar(100)
+  hireDate DateTime? @db.Date
+  notes String? @db.Text
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@unique([schoolId, code])
+  @@unique([schoolId, userId])
+  @@index([schoolId, isActive, name])
+}
+
 model Teacher {
   id       String  @id @default(cuid())
   schoolId String
@@ -506,6 +610,7 @@ model Term {
   endDate   DateTime @db.Date
 
   status     TermStatus @default(OPEN)
+  revision   Int        @default(0)
   closedAt   DateTime?
   closedById String?
 
@@ -1230,6 +1335,8 @@ model Invoice {
   schoolId     String
   enrollmentId String
   termId       String?
+  generationKey String? @unique @db.Char(64)
+  revision      Int     @default(0)
 
   reference   String
   periodYear  Int?
@@ -1421,4 +1528,13 @@ model AuditLog {
   @@index([schoolId, entity, entityId])
   @@index([actorUserId])
   @@index([at])
+}
+
+/// Global authentication budget. Keys are HMAC digests, never email, phone or IP.
+model AuthThrottle {
+  key       String   @id @db.Char(64)
+  attempts  Int      @default(0)
+  expiresAt DateTime @db.DateTime(3)
+
+  @@index([expiresAt])
 }

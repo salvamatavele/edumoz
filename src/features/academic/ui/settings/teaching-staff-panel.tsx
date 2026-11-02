@@ -20,12 +20,13 @@ import { EntitySection } from "@/features/academic/ui/settings/entity-section";
 import { SubjectScope } from "@/types";
 
 interface TeachingStaffPanelProps {
+  readonly canCreate?: boolean;
   readonly teachers: readonly TeacherRow[];
   readonly teachingGroups: { readonly rows: readonly TeachingGroupRow[]; readonly academicYear: string | null };
   readonly options: TeachingStaffOptions;
 }
 
-export function TeachingStaffPanel({ teachers, teachingGroups, options }: TeachingStaffPanelProps) {
+export function TeachingStaffPanel({ teachers, teachingGroups, options, canCreate = true }: TeachingStaffPanelProps) {
   const t = useTranslations("teachingStaff");
   const tForm = useTranslations("form");
 
@@ -154,6 +155,7 @@ export function TeachingStaffPanel({ teachers, teachingGroups, options }: Teachi
 
       <TabsContent value="teachers">
       <EntitySection<TeacherRow, CreateTeacherInput>
+        canCreate={canCreate}
         subtitle={t("teachers.subtitle")}
         tableLabel={t("teachers.tableLabel")}
         columns={teacherColumns}
@@ -179,6 +181,7 @@ export function TeachingStaffPanel({ teachers, teachingGroups, options }: Teachi
 
       <TabsContent value="teachingGroups">
       <EntitySection<TeachingGroupRow, CreateTeachingGroupInput>
+        canCreate={canCreate}
         subtitle={t("teachingGroups.subtitle")}
         tableLabel={t("teachingGroups.tableLabel")}
         columns={teachingGroupColumns}

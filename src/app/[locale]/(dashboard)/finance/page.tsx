@@ -1,3 +1,6 @@
+import { notFound } from "next/navigation";
+import { invoicePeriodSchema } from "@/features/finance/domain/invoice-schema";
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -5,8 +8,7 @@ import { listFeeItems, listFeeScheduleOptions, listFeeSchedules } from "@/featur
 import { getDebtReport, getStudentAccount, listDebtReportFilters } from "@/features/finance/data/invoicing";
 import { getInvoiceForPayment } from "@/features/finance/data/payments";
 import { FinancePanel } from "@/features/finance/ui/finance-panel";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
-import { redirect } from "@/i18n/navigation";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -44,16 +46,10 @@ export default async function FinancePage({
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  if (!hasPermission(context, "finance", "view")) {
+    return <AccessDenied message={tCommon("forbidden")} />;
   }
 
   const { schoolId } = session;
@@ -66,6 +62,11 @@ export default async function FinancePage({
   const invoiceId = typeof resolvedSearchParams.factura === "string" ? resolvedSearchParams.factura : "";
   const requestedTab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "";
 
+  const period = periodYearParam
+    ? invoicePeriodSchema.safeParse({ periodYear: periodYearParam, periodMonth: periodMonthParam || undefined })
+    : null;
+  if (period && !period.success) notFound();
+
   const [feeSchedules, feeItems, options, debtReportFilters] = await Promise.all([
     listFeeSchedules(schoolId),
     listFeeItems(schoolId),
@@ -73,10 +74,10 @@ export default async function FinancePage({
     listDebtReportFilters(schoolId),
   ]);
 
-  const periodYear = periodYearParam ? Number(periodYearParam) : null;
+  const periodYear = period?.success ? period.data.periodYear : null;
   const debtReport =
     classGroupId && periodYear
-      ? await getDebtReport(schoolId, classGroupId, periodYear, periodMonthParam ? Number(periodMonthParam) : null)
+      ? await getDebtReport(schoolId, classGroupId, periodYear, period?.success ? period.data.periodMonth ?? null : null)
       : null;
 
   const studentAccount = enrollmentId ? await getStudentAccount(schoolId, enrollmentId) : null;
@@ -94,7 +95,7 @@ export default async function FinancePage({
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <FinancePanel
+      <FinancePanel canCreate={hasPermission(context, "finance", "create")} canEdit={hasPermission(context, "finance", "edit")}
         feeSchedules={feeSchedules}
         feeItems={feeItems}
         options={options}

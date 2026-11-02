@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Role } from "@/types";
@@ -82,7 +83,9 @@ describe("initiateMobileMoneyPayment", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await prisma.payment.deleteMany({ where: { invoiceId } });
+    await prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PENDING", paidAmount: "0", cancelledAt: null } });
     mockAuth.mockResolvedValue({
       user: { id: "user-1", name: null, email: null, image: null },
       schoolId,
@@ -97,7 +100,7 @@ describe("initiateMobileMoneyPayment", () => {
 
   it("grava o Payment em INITIATED antes de qualquer resposta do operador — mesmo quando o operador nunca responde (timeout)", async () => {
     const result = await initiateMobileMoneyPayment({
-      invoiceId,
+      idempotencyKey: randomUUID(),      invoiceId,
       provider: "MPESA",
       payerPhone: "+258842222222",
     } as never);
@@ -115,7 +118,7 @@ describe("initiateMobileMoneyPayment", () => {
 
   it("termina em 0000 — o operador confirma de imediato e a factura fica paga", async () => {
     const result = await initiateMobileMoneyPayment({
-      invoiceId,
+      idempotencyKey: randomUUID(),      invoiceId,
       provider: "MPESA",
       payerPhone: "+258840000000",
     } as never);
@@ -147,7 +150,7 @@ describe("initiateMobileMoneyPayment", () => {
     });
 
     const result = await initiateMobileMoneyPayment({
-      invoiceId: paidInvoice.id,
+      idempotencyKey: randomUUID(),      invoiceId: paidInvoice.id,
       provider: "MPESA",
       payerPhone: "+258849999999",
     } as never);

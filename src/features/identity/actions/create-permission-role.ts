@@ -2,92 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-
 import type { FormActionResult } from "@/components/form/field-schema";
-import { loadMembershipPermissions } from "@/features/identity/data/permissions";
-import {
-  createPermissionRoleSchema,
-  type CreatePermissionRoleInput,
-} from "@/features/identity/domain/permission-role-schema";
+import { createSchoolPermissionRole } from "../data/create-permission-role";
+import { isUnrestrictedSchoolAdministrator, toSessionContext } from "../domain/access";
+import { createPermissionRoleSchema, PermissionRoleError, type CreatePermissionRoleInput } from "../domain/permission-role-schema";
+import { matchesSchoolMutationScope, SchoolUserError } from "../domain/school-users";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { auth } from "@/lib/auth/config";
-import { getTenantDb } from "@/lib/db/tenant";
-import { Role } from "@/types";
 
-/**
- * Cria um papel configurável. Só quem já tem acesso total pode geri-los — um gestor
- * restrito (com `permissionRoleId` já atribuído a si próprio) não pode criar nem alterar
- * papéis, para não se auto-conceder permissões que o seu papel actual não tem. Ver
- * openspec/changes/permissions-management/design.md.
- */
-export async function createPermissionRole(
-  values: CreatePermissionRoleInput,
-): Promise<FormActionResult<CreatePermissionRoleInput>> {
+export async function createPermissionRole(values: CreatePermissionRoleInput): Promise<FormActionResult<CreatePermissionRoleInput>> {
   const t = await getTranslations();
-
   const session = await auth();
-
-  if (!session?.schoolId) {
-    return { status: "error", message: t("common.forbidden") };
-  }
-
-  if (!session.isPlatformAdmin) {
-    if (session.role !== Role.SCHOOL_MANAGER) {
-      return { status: "error", message: t("common.forbidden") };
-    }
-
-    const { permissionRoleId } = await loadMembershipPermissions(session.schoolId, session.user.id);
-
-    if (permissionRoleId) {
-      return { status: "error", message: t("common.forbidden") };
-    }
-  }
-
+  if (!session?.schoolId || !isUnrestrictedSchoolAdministrator(toSessionContext(session))) return { status: "error", message: t("common.forbidden") };
+  if (!matchesSchoolMutationScope(session.schoolId, values?.expectedSchoolId)) return { status: "error", message: t("users.errors.schoolChanged") };
   const parsed = createPermissionRoleSchema.safeParse(values);
-
-  if (!parsed.success) {
-    return { status: "error", fieldErrors: { name: t("permissionRoles.errors.name") } };
+  if (!parsed.success) return parsed.error.issues.some(issue => issue.path[0] === "name") ? { status: "error", fieldErrors: { name: t("permissionRoles.errors.name") } } : { status: "error", message: t("permissionRoles.errors.createFailed") };
+  try {
+    const role = await createSchoolPermissionRole(toSessionContext(session), parsed.data);
+    for (const locale of routing.locales) revalidatePath(getPathname({ locale, href: "/settings" }));
+    return { status: "success", message: role.name };
+  } catch (error) {
+    return { status: "error", message: t(error instanceof SchoolUserError ? `users.errors.${error.code}` : error instanceof PermissionRoleError ? `permissionRoles.errors.${error.code}` : "permissionRoles.errors.createFailed") };
   }
-
-  const { schoolId } = session;
-  const db = getTenantDb(schoolId);
-  const data = parsed.data;
-
-  // Ids arbitrários vindos do cliente são filtrados contra o catálogo real — só sobrevive
-  // o que corresponde mesmo a um `Permission` semeado (ver permission-role-schema.ts).
-  const validPermissions = await db.permission.findMany({
-    where: { id: { in: data.permissionIds } },
-    select: { id: true },
-  });
-
-  const role = await db.$transaction(async (tx) => {
-    const created = await tx.permissionRole.create({
-      data: {
-        schoolId,
-        name: data.name,
-        description: data.description || null,
-        permissions: { create: validPermissions.map((p) => ({ permissionId: p.id })) },
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "permissionRole.create",
-        entity: "PermissionRole",
-        entityId: created.id,
-        after: JSON.parse(JSON.stringify(created)),
-      },
-    });
-
-    return created;
-  });
-
-  for (const locale of routing.locales) {
-    revalidatePath(getPathname({ locale, href: "/settings" }));
-  }
-
-  return { status: "success", message: role.name };
 }

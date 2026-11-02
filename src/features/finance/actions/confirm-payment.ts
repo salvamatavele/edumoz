@@ -4,15 +4,15 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 
 import { SimulatedGateway } from "@/features/finance/data/gateways/simulated-gateway";
-import { recalculateInvoiceBalance } from "@/features/finance/domain/invoice-balance";
+import { applyGatewayResult, FinancialMutationError } from "@/features/finance/data/payment-transactions";
+import { MobileMoneyGatewayError } from "@/features/finance/domain/ports/mobile-money-gateway";
 import {
   confirmPaymentSchema,
   type ConfirmPaymentInput,
 } from "@/features/finance/domain/payment-schema";
-import { resolvePaymentTransition } from "@/features/finance/domain/payment-transition";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -41,15 +41,9 @@ export async function confirmPayment(values: ConfirmPaymentInput): Promise<Confi
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "finance", "edit")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -86,53 +80,19 @@ export async function confirmPayment(values: ConfirmPaymentInput): Promise<Confi
   }
 
   const gateway = new SimulatedGateway(payment.provider);
-  const statusResult = await gateway.getStatus(payment.providerReference);
-
-  const now = new Date();
-  const transition = resolvePaymentTransition(payment.status, statusResult, now);
-
-  if (!transition) {
-    return { status: "success", paymentStatus: payment.status };
+  let paymentStatus: PaymentStatus;
+  try {
+    const statusResult = await gateway.getStatus(payment.providerReference);
+    paymentStatus = await applyGatewayResult(schoolId, payment.invoice.id, payment.id, statusResult, session.user.id, "payment.confirm");
+  } catch (error) {
+    if (error instanceof MobileMoneyGatewayError) return { status: "error", message: t("finance.payments.errors.gatewayFailure") };
+    if (error instanceof FinancialMutationError) return { status: "error", message: t(`finance.payments.errors.${error.code}`) };
+    throw error;
   }
-
-  await db.$transaction(async (tx) => {
-    await tx.payment.update({
-      where: { id: payment.id },
-      data: { ...transition, rawPayload: JSON.parse(JSON.stringify(transition.rawPayload ?? null)) },
-    });
-
-    if (transition.status === "CONFIRMED") {
-      const confirmedPayments = await tx.payment.findMany({
-        where: { invoiceId: payment.invoice.id, status: "CONFIRMED" },
-        select: { amount: true },
-      });
-
-      const balance = recalculateInvoiceBalance(
-        payment.invoice.total,
-        confirmedPayments.map((p) => p.amount),
-        payment.invoice.dueDate,
-        now,
-        payment.invoice.cancelledAt,
-      );
-
-      await tx.invoice.update({ where: { id: payment.invoice.id }, data: balance });
-    }
-
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "payment.confirm",
-        entity: "Payment",
-        entityId: payment.id,
-        after: JSON.parse(JSON.stringify(transition)),
-      },
-    });
-  });
 
   for (const locale of routing.locales) {
     revalidatePath(getPathname({ locale, href: "/finance" }));
   }
 
-  return { status: "success", paymentStatus: transition.status };
+  return { status: "success", paymentStatus };
 }

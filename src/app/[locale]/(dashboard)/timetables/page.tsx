@@ -1,12 +1,12 @@
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getClassGroupSchedule, getScheduleBoardData } from "@/features/academic/data/scheduling";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { PrintButton } from "@/features/academic/ui/print-button";
 import { ScheduleBoard } from "@/features/academic/ui/schedule-board";
 import { ScheduleView } from "@/features/academic/ui/schedule-view";
-import { redirect } from "@/i18n/navigation";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -46,16 +46,10 @@ export default async function TimetablesPage({
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  if (!hasPermission(context, "scheduling", "view")) {
+    return <AccessDenied message={tCommon("forbidden")} />;
   }
 
   const data = await getScheduleBoardData(session.schoolId);
@@ -77,7 +71,7 @@ export default async function TimetablesPage({
       {data.academicYear ? (
         <>
           <div className="print:hidden">
-            <ScheduleBoard {...data} />
+            <ScheduleBoard canCreate={hasPermission(context, "scheduling", "create")} canEdit={hasPermission(context, "scheduling", "edit")} {...data} />
           </div>
 
           <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-6 print:border-none print:p-0">

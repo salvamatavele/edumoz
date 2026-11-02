@@ -12,12 +12,15 @@ import { AssessmentRegime, ComponentType, RoundingMode } from "@/types";
  * (peso positivo, código não vazio); a COERÊNCIA do esquema inteiro (pesos somam 1.0000)
  * fica com `validateScheme` (`grade-engine.ts`), que corre depois, no servidor.
  */
+const storedScore = z.coerce.number().min(-999.99).max(999.99).multipleOf(0.01);
+const storedWeight = z.coerce.number().min(0).max(9.9999).multipleOf(0.0001);
+
 export const assessmentComponentInputSchema = z.object({
   code: z.string().trim().min(1),
   name: z.string().trim().min(1),
   type: z.enum(ComponentType),
-  weight: z.coerce.number().positive(),
-  minGrade: optionalNumberField(z.coerce.number().min(0)),
+  weight: storedWeight.positive(),
+  minGrade: optionalNumberField(storedScore.min(0)),
 });
 
 export type AssessmentComponentInput = z.infer<typeof assessmentComponentInputSchema>;
@@ -29,16 +32,16 @@ export const createAssessmentSchemeSchema = z.object({
   gradeLevelId: z.string().trim().optional().or(z.literal("")).or(z.literal("none")),
   subjectId: z.string().trim().optional().or(z.literal("")).or(z.literal("none")),
   regime: z.enum(AssessmentRegime),
-  scaleMin: z.coerce.number(),
-  scaleMax: z.coerce.number(),
-  passMark: z.coerce.number(),
+  scaleMin: storedScore,
+  scaleMax: storedScore,
+  passMark: storedScore,
   roundingMode: z.enum(RoundingMode),
-  decimalPlaces: z.coerce.number().int().min(0),
+  decimalPlaces: z.coerce.number().int().min(0).max(2),
   hasExam: z.boolean(),
-  examWeight: z.coerce.number().min(0),
-  minGradeForExam: optionalNumberField(z.coerce.number()),
-  exemptionGrade: optionalNumberField(z.coerce.number()),
-  minExamGrade: optionalNumberField(z.coerce.number()),
+  examWeight: storedWeight,
+  minGradeForExam: optionalNumberField(storedScore),
+  exemptionGrade: optionalNumberField(storedScore),
+  minExamGrade: optionalNumberField(storedScore),
   components: z.array(assessmentComponentInputSchema),
 });
 

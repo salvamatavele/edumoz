@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/db/client";
+import { withTransactionRetry } from "@/lib/db/transaction-retry";
 
 import {
   type SignInCandidate,
   type SignInDecision,
   decideSignIn,
+  domainAllowed,
 } from "../domain/sign-in-policy";
 
 /**
@@ -17,6 +19,20 @@ export async function authoriseSignIn(
   candidate: SignInCandidate,
   now = new Date(),
 ): Promise<SignInDecision> {
+  if (candidate.provider === "credentials") {
+    if (!candidate.userId) return { allow: false, reason: "NO_MEMBERSHIP_OR_INVITATION" };
+    const user = await prisma.user.findUnique({
+      where: { id: candidate.userId },
+      select: { isActive: true, isPlatformAdmin: true, memberships: { select: { status: true, school: { select: { isActive: true } } } } },
+    });
+    if (!user) return { allow: false, reason: "NO_MEMBERSHIP_OR_INVITATION" };
+    if (!user.isActive) return { allow: false, reason: "ALL_MEMBERSHIPS_SUSPENDED" };
+    if (user.isPlatformAdmin || user.memberships.some((membership) => membership.status === "ACTIVE" && membership.school.isActive)) {
+      return { allow: true, acceptInvitationIds: [] };
+    }
+    return { allow: false, reason: user.memberships.length ? "ALL_MEMBERSHIPS_SUSPENDED" : "NO_MEMBERSHIP_OR_INVITATION" };
+  }
+
   if (!candidate.email) {
     return decideSignIn({
       candidate,
@@ -107,31 +123,33 @@ export async function acceptInvitations(
 ): Promise<void> {
   if (invitationIds.length === 0) return;
 
-  await prisma.$transaction(async (tx) => {
+  const candidates = await prisma.invitation.findMany({ where: { id: { in: [...invitationIds] }, status: "PENDING" }, select: { schoolId: true } });
+  await withTransactionRetry(() => prisma.$transaction(async (tx) => {
+    // Same school-first lock order as retirement; reread invitations after the lock.
+    const schools: string[] = [];
+    for (const schoolId of [...new Set(candidates.map(row => row.schoolId))].sort()) {
+      const locked = await tx.school.updateMany({ where: { id: schoolId, isActive: true }, data: { isActive: true } });
+      if (locked.count === 1) schools.push(schoolId);
+    }
+    const holder = await tx.user.findUnique({ where: { id: userId }, select: { email: true, isActive: true, passwordChangeRequired: true } });
+    if (!holder?.isActive || holder.passwordChangeRequired || !holder.email) return;
     const invitations = await tx.invitation.findMany({
-      where: { id: { in: [...invitationIds] }, status: "PENDING" },
-      select: { id: true, schoolId: true, role: true },
+      where: { id: { in: [...invitationIds] }, schoolId: { in: schools }, email: holder.email, status: "PENDING", expiresAt: { gt: now } },
+      select: { id: true, schoolId: true, role: true, school: { select: { allowedEmailDomain: true } } },
     });
-
-    for (const invitation of invitations) {
+    const accepted = invitations.filter(invitation => domainAllowed(holder.email!, invitation.school.allowedEmailDomain));
+    for (const invitation of accepted) {
       await tx.membership.upsert({
-        where: {
-          userId_schoolId_role: {
-            userId,
-            schoolId: invitation.schoolId,
-            role: invitation.role,
-          },
-        },
+        where: { userId_schoolId_role: { userId, schoolId: invitation.schoolId, role: invitation.role } },
         create: { userId, schoolId: invitation.schoolId, role: invitation.role },
         update: { status: "ACTIVE" },
       });
     }
-
     await tx.invitation.updateMany({
-      where: { id: { in: invitations.map((i) => i.id) } },
+      where: { id: { in: accepted.map(row => row.id) }, status: "PENDING" },
       data: { status: "ACCEPTED", acceptedAt: now, acceptedByUserId: userId },
     });
-  });
+  }, { isolationLevel: "ReadCommitted" }));
 }
 
 /** Papéis e escolas do utilizador, para a sessão. */
@@ -171,10 +189,12 @@ export async function findUserForCredentials(identifier: string) {
   const value = identifier.trim().toLowerCase();
 
   // Alunos e encarregados identificam-se muitas vezes por telemóvel e não por e-mail.
-  return prisma.user.findFirst({
+  const phone = /^(?:\+?258)?8[2-7]\d{7}$/.test(value) ? value.slice(-9) : null;
+  const candidates = await prisma.user.findMany({
+    take: 2,
     where: {
       isActive: true,
-      OR: [{ email: value }, { phone: identifier.trim() }],
+      OR: [{ email: value }, { phone: { in: phone ? [phone, `258${phone}`, `+258${phone}`] : [identifier.trim()] } }, { loginCode: value.toUpperCase() }],
     },
     select: {
       id: true,
@@ -182,7 +202,11 @@ export async function findUserForCredentials(identifier: string) {
       email: true,
       image: true,
       passwordHash: true,
+      authVersion: true,
+      passwordChangeRequired: true,
+      passwordExpiresAt: true,
       isPlatformAdmin: true,
     },
   });
+  return candidates.length === 1 ? candidates[0] : null;
 }

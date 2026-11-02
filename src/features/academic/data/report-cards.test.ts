@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const { prisma } = await import("@/lib/db/client");
-const { getReportCard } = await import("./report-cards");
+const { getReportCard, listReportCardFilters } = await import("./report-cards");
 
 describe("getReportCard", () => {
   const suffix = `T${Date.now()}`;
@@ -12,12 +12,17 @@ describe("getReportCard", () => {
   let openTermId = "";
   let closedTermId = "";
   let emptyClassGroupId = "";
+  let teacherUserId = "";
+  let teacherId = "";
+  let teachingGroupId = "";
 
   beforeAll(async () => {
     const school = await prisma.school.create({
       data: { code: `RC-${suffix}`, name: "Escola de teste (pautas)", province: "Maputo", district: "KaMpfumu" },
     });
     schoolId = school.id;
+    teacherUserId = (await prisma.user.create({ data: { name: "Synthetic report owner" } })).id;
+    teacherId = (await prisma.teacher.create({ data: { schoolId, userId: teacherUserId, code: `T-${suffix}`, firstName: "Synthetic", lastName: "Owner" } })).id;
 
     const academicYear = await prisma.academicYear.create({
       data: {
@@ -83,6 +88,7 @@ describe("getReportCard", () => {
     const enrollmentA = await prisma.enrollment.create({
       data: { schoolId, studentId: studentA.id, academicYearId: academicYear.id, studyPathId: studyPath.id, classGroupId, number: `2026/${suffix}-A` },
     });
+    teachingGroupId = (await prisma.teachingGroup.create({ data: { schoolId, academicYearId: academicYear.id, subjectId, teacherId, name: `Owned-${suffix}`, scope: "CORE", classGroupId, members: { create: { enrollmentId: enrollmentA.id } } } })).id;
 
     const studentB = await prisma.student.create({
       data: { schoolId, code: `STB-${suffix}`, firstName: "Aires", lastName: "Manhique", birthDate: new Date("2010-01-01"), gender: "MALE" },
@@ -117,6 +123,7 @@ describe("getReportCard", () => {
     await prisma.assessmentScheme.deleteMany({ where: { schoolId } });
     await prisma.enrollment.deleteMany({ where: { schoolId } });
     await prisma.school.delete({ where: { id: schoolId } });
+    await prisma.user.delete({ where: { id: teacherUserId } });
     await prisma.$disconnect();
   });
 
@@ -154,5 +161,23 @@ describe("getReportCard", () => {
     expect(result.status).toBe("ready");
     if (result.status !== "ready") return;
     expect(result.rows).toHaveLength(0);
+  });
+  it("limits teacher filters and report rows to owned teaching-group members", async () => {
+    const filters = await listReportCardFilters(schoolId, teacherUserId);
+    expect(filters.classGroups.map(row => row.id)).toEqual([classGroupId]);
+    expect(filters.subjects.map(row => row.id)).toEqual([subjectId]);
+    const report = await getReportCard(schoolId, classGroupId, subjectId, closedTermId, teacherUserId);
+    expect(report.status).toBe("ready");
+    if (report.status === "ready") expect(report.rows.map(row => row.studentName)).toEqual(["Bruna Zunguza"]);
+    expect(await getReportCard(schoolId, emptyClassGroupId, subjectId, closedTermId, teacherUserId)).toEqual({ status: "not-found" });
+    expect(await getReportCard(schoolId, classGroupId, subjectId, closedTermId, "unrelated-account")).toEqual({ status: "not-found" });
+  });
+  it("revokes teacher report ownership immediately when the professional profile becomes inactive", async () => {
+    await prisma.teacher.update({ where: { id: teacherId }, data: { isActive: false } });
+    try {
+      expect((await listReportCardFilters(schoolId, teacherUserId)).classGroups).toEqual([]);
+      expect(await getReportCard(schoolId, classGroupId, subjectId, closedTermId, teacherUserId)).toEqual({ status: "not-found" });
+    } finally { await prisma.teacher.update({ where: { id: teacherId }, data: { isActive: true } }); }
+    expect(await prisma.teachingGroup.findUnique({ where: { id: teachingGroupId } })).not.toBeNull();
   });
 });

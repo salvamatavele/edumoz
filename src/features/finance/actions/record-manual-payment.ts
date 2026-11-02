@@ -1,19 +1,19 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 
 import type { FormActionResult } from "@/components/form/field-schema";
-import { recalculateInvoiceBalance } from "@/features/finance/domain/invoice-balance";
+import { FinancialMutationError, withInvoiceTransaction, refreshInvoiceBalance } from "@/features/finance/data/payment-transactions";
+import { paymentIntentKey } from "@/features/finance/data/financial-keys";
+import { toDecimal } from "@/features/shared/domain/numeric";
 import {
   recordManualPaymentSchema,
   type RecordManualPaymentInput,
 } from "@/features/finance/domain/payment-schema";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -36,15 +36,9 @@ export async function recordManualPayment(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "finance", "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -65,61 +59,27 @@ export async function recordManualPayment(
   const db = getTenantDb(schoolId);
   const data = parsed.data;
 
-  const invoice = await db.invoice.findUnique({
-    where: { id: data.invoiceId },
-    select: { id: true, total: true, dueDate: true, cancelledAt: true, status: true },
-  });
-
-  if (!invoice) {
-    return { status: "error", message: t("finance.payments.errors.invoiceNotFound") };
+  const idempotencyKey = paymentIntentKey(schoolId, "manual", data.idempotencyKey);
+  try {
+    await withInvoiceTransaction(schoolId, data.invoiceId, async (tx, invoice) => {
+      const existing = await tx.payment.findUnique({ where: { idempotencyKey } });
+      if (existing) {
+        if (existing.invoiceId !== invoice.id || existing.method !== data.method || !toDecimal(existing.amount).equals(data.amount)) throw new FinancialMutationError("intentConflict");
+        return;
+      }
+      if (invoice.status === "CANCELLED" || invoice.cancelledAt) throw new FinancialMutationError("invoiceCancelled");
+      const now = new Date();
+      const payment = await tx.payment.create({ data: { schoolId, invoiceId: invoice.id, amount: data.amount, currency: invoice.currency, method: data.method, status: "CONFIRMED", idempotencyKey, confirmedAt: now, initiatedById: session.user.id } });
+      await refreshInvoiceBalance(tx, invoice, now);
+      await tx.auditLog.create({ data: { schoolId, actorUserId: session.user.id, action: "payment.recordManual", entity: "Payment", entityId: payment.id, after: JSON.parse(JSON.stringify({ status: payment.status, amount: payment.amount.toString(), currency: payment.currency, method: payment.method, confirmedAt: payment.confirmedAt })) } });
+    });
+  } catch (error) {
+    if (error instanceof FinancialMutationError) return { status: "error", message: t(`finance.payments.errors.${error.code}`) };
+    // A key reused across two invoices can race outside their separate row locks.
+    const existing = await db.payment.findUnique({ where: { idempotencyKey } });
+    if (existing) return { status: "error", message: t("finance.payments.errors.intentConflict") };
+    throw error;
   }
-
-  if (invoice.status === "CANCELLED") {
-    return { status: "error", message: t("finance.payments.errors.invoiceCancelled") };
-  }
-
-  const now = new Date();
-
-  await db.$transaction(async (tx) => {
-    const payment = await tx.payment.create({
-      data: {
-        schoolId,
-        invoiceId: invoice.id,
-        amount: data.amount,
-        method: data.method,
-        status: "CONFIRMED",
-        idempotencyKey: randomUUID(),
-        confirmedAt: now,
-        initiatedById: session.user.id,
-      },
-    });
-
-    const confirmedPayments = await tx.payment.findMany({
-      where: { invoiceId: invoice.id, status: "CONFIRMED" },
-      select: { amount: true },
-    });
-
-    const balance = recalculateInvoiceBalance(
-      invoice.total,
-      confirmedPayments.map((p) => p.amount),
-      invoice.dueDate,
-      now,
-      invoice.cancelledAt,
-    );
-
-    await tx.invoice.update({ where: { id: invoice.id }, data: balance });
-
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "payment.recordManual",
-        entity: "Payment",
-        entityId: payment.id,
-        after: JSON.parse(JSON.stringify(payment)),
-      },
-    });
-  });
 
   for (const locale of routing.locales) {
     revalidatePath(getPathname({ locale, href: "/finance" }));

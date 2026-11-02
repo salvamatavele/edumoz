@@ -56,6 +56,15 @@ const data: ScheduleBoardData = {
 };
 
 describe("ScheduleBoard", () => {
+  it("permite consultar sem abrir colocação ou edição em modo de leitura", async () => {
+    renderWithIntl(<ScheduleBoard {...data} canCreate={false} canEdit={false} />);
+    expect(screen.getByText("Matemática")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Colocar aula neste tempo" })).not.toBeInTheDocument();
+    const lesson = screen.getByText("Matemática").closest("button")!;
+    expect(lesson).toBeDisabled();
+    await userEvent.click(lesson);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
   afterEach(() => {
     mockPlaceScheduleEntry.mockReset();
     refresh.mockClear();

@@ -7,6 +7,7 @@ import {
   hasPermission,
   isFamilyRole,
   isSchoolAdministrator,
+  isUnrestrictedSchoolAdministrator,
   isStaffRole,
   rankOf,
   resolveActiveSchool,
@@ -167,4 +168,30 @@ describe("rankOf", () => {
     expect(rankOf(ROLE.TEACHER)).toBeGreaterThan(rankOf(ROLE.GUARDIAN));
     expect(rankOf(ROLE.GUARDIAN)).toBeGreaterThan(rankOf(ROLE.STUDENT));
   });
+});
+
+describe("role administration eligibility", () => {
+  const context: SessionContext = { userId: "holder", schoolId: "school-a", role: "SCHOOL_MANAGER", memberships: [], isPlatformAdmin: false };
+  it("requires a scoped holder and refuses restricted managers despite arbitrary grants", () => {
+    expect(isUnrestrictedSchoolAdministrator(context)).toBe(true);
+    expect(isUnrestrictedSchoolAdministrator({ ...context, permissionRoleId: "reader", permissions: [{ resource: "users", action: "create" }] })).toBe(false);
+    expect(isUnrestrictedSchoolAdministrator({ ...context, schoolId: null })).toBe(false);
+    expect(isUnrestrictedSchoolAdministrator({ ...context, userId: "" })).toBe(false);
+    expect(isUnrestrictedSchoolAdministrator({ ...context, role: "TEACHER" })).toBe(false);
+    expect(isUnrestrictedSchoolAdministrator({ ...context, role: null, isPlatformAdmin: true })).toBe(true);
+  });
+});
+
+it("does not restore full access when explicit restrictions have no legacy bridge", () => {
+  const restricted = context({ role: ROLE.SCHOOL_MANAGER, permissionRoleId: null, permissionsConfigured: true, permissions: [] });
+  expect(hasPermission(restricted, "students", "view")).toBe(false);
+  expect(isUnrestrictedSchoolAdministrator(restricted)).toBe(false);
+  expect(hasPermission({ ...restricted, permissions: [{ resource: "students", action: "view" }] }, "students", "view")).toBe(true);
+});
+it("allows explicit administrative teacher grants without making a family role or teacher unrestricted", () => {
+  const granted = context({ role: ROLE.TEACHER, permissionsConfigured: true, permissions: [{ resource: "students", action: "view" }] });
+  expect(hasPermission(granted, "students", "view")).toBe(true);
+  expect(hasPermission(granted, "students", "edit")).toBe(false);
+  expect(isUnrestrictedSchoolAdministrator(granted)).toBe(false);
+  expect(hasPermission({ ...granted, role: ROLE.GUARDIAN }, "students", "view")).toBe(false);
 });

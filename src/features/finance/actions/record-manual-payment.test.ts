@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Role } from "@/types";
@@ -104,13 +105,13 @@ describe("recordManualPayment", () => {
 
   it("recusa um papel sem gestão da escola", async () => {
     mockAuth.mockResolvedValue(sessionAs("TEACHER"));
-    const result = await recordManualPayment({ invoiceId, amount: 1800, method: "CASH" } as never);
+    const result = await recordManualPayment({ idempotencyKey: randomUUID(), invoiceId, amount: 1800, method: "CASH" } as never);
     expect(result.status).toBe("error");
   });
 
   it("confirma o pagamento de imediato e actualiza a factura para PAID", async () => {
     mockAuth.mockResolvedValue(sessionAs("SCHOOL_MANAGER"));
-    const result = await recordManualPayment({ invoiceId, amount: 1800, method: "CASH" } as never);
+    const result = await recordManualPayment({ idempotencyKey: randomUUID(), invoiceId, amount: 1800, method: "CASH" } as never);
 
     expect(result.status).toBe("success");
 

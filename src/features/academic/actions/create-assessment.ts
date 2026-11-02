@@ -13,6 +13,7 @@ import {
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { auth } from "@/lib/auth/config";
+import { requireTermState, TermMutationError } from "@/features/academic/data/term-mutations";
 import { getTenantDb } from "@/lib/db/tenant";
 
 /**
@@ -75,32 +76,44 @@ export async function createAssessment(
     };
   }
 
-  await db.$transaction(async (tx) => {
-    const created = await tx.assessment.create({
-      data: {
-        schoolId,
-        teachingGroupId: parsed.data.teachingGroupId,
-        termId: parsed.data.termId,
-        componentId: parsed.data.componentId,
-        name: parsed.data.name,
-        maxScore: parsed.data.maxScore,
-        weight: parsed.data.weight,
-        date: parsed.data.date,
-        createdById: session.user.id,
-      },
-    });
+  try {
+    await db.$transaction(async (tx) => {
+      await requireTermState(tx, parsed.data.termId, "OPEN");
+      const [currentGroup, currentTerm] = await Promise.all([
+        tx.teachingGroup.findUnique({ where: { id: parsed.data.teachingGroupId }, select: { teacherId: true, academicYearId: true } }),
+        tx.term.findUnique({ where: { id: parsed.data.termId }, select: { academicYearId: true } }),
+      ]);
+      if (!currentGroup || currentGroup.teacherId !== teacher.id) throw new TermMutationError("forbidden");
+      if (!currentTerm || currentTerm.academicYearId !== currentGroup.academicYearId) throw new TermMutationError("invalid");
+      const created = await tx.assessment.create({
+        data: {
+          schoolId,
+          teachingGroupId: parsed.data.teachingGroupId,
+          termId: parsed.data.termId,
+          componentId: parsed.data.componentId,
+          name: parsed.data.name,
+          maxScore: parsed.data.maxScore,
+          weight: parsed.data.weight,
+          date: parsed.data.date,
+          createdById: session.user.id,
+        },
+      });
 
-    await tx.auditLog.create({
-      data: {
-        schoolId,
-        actorUserId: session.user.id,
-        action: "assessment.create",
-        entity: "Assessment",
-        entityId: created.id,
-        after: JSON.parse(JSON.stringify(created)),
-      },
-    });
-  });
+      await tx.auditLog.create({
+        data: {
+          schoolId,
+          actorUserId: session.user.id,
+          action: "assessment.create",
+          entity: "Assessment",
+          entityId: created.id,
+          after: JSON.parse(JSON.stringify(created)),
+        },
+      });
+    }, { isolationLevel: "RepeatableRead" });
+  } catch (error) {
+    if (error instanceof TermMutationError) return { status: "error", message: t(error.code === "forbidden" ? "common.forbidden" : error.code === "closed" ? "gradeEntry.errors.termClosed" : "gradeEntry.errors.invalid") };
+    throw error;
+  }
 
   for (const locale of routing.locales) {
     revalidatePath(getPathname({ locale, href: "/grades" }));

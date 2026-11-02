@@ -13,6 +13,10 @@ describe("invoicing data", () => {
   let enrollmentId = "";
   let invoiceId = "";
 
+  it.each([[NaN, 3], [Infinity, 3], [2026.5, 3], [2026, NaN], [2026, 13], [2026, 0]])("rejects an invalid period (%s, %s) without a database validation failure", async (year, month) => {
+    expect(await getDebtReport(schoolId, classGroupId, year, month)).toEqual([]);
+  });
+
   beforeAll(async () => {
     const school = await prisma.school.create({
       data: { code: `IV-${suffix}`, name: "Escola de teste (conta-corrente)", province: "Maputo", district: "KaMpfumu" },

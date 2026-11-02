@@ -103,6 +103,7 @@ export function DataTable<TData>({
   emptyHint,
   label,
 }: DataTableProps<TData>) {
+  "use no memo"; // TanStack Table exposes mutable functions that the compiler cannot memoize safely.
   const t = useTranslations("dataTable");
 
   const [sorting, setSorting] = useState<SortingState>([]);

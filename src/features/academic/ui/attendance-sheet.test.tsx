@@ -1,3 +1,4 @@
+import { useState, type ComponentProps } from "react";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -103,4 +104,29 @@ describe("AttendanceSheet", () => {
     await waitFor(() => expect(mockReopenAttendance).toHaveBeenCalledWith("session-1"));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
+});
+
+
+it("resets attendance from a changed saved snapshot rather than keeping stale local marks", async () => {
+  function RefreshingSheet() {
+    const [snapshot, setSnapshot] = useState<ComponentProps<typeof AttendanceSheet>["initialEntries"]>(entries);
+    return <><button onClick={() => setSnapshot(entries.map((entry, i) => i === 0 ? { ...entry, status: "LATE" } : entry))}>Saved correction</button>
+      <AttendanceSheet scheduleEntryId="schedule-1" date="2026-08-17" teachingGroupName="10A" subjectName="Matemática" sessionId={null} sessionStatus={null} initialEntries={snapshot} />
+    </>;
+  }
+  renderWithIntl(<RefreshingSheet />);
+  await userEvent.click(screen.getByRole("button", { name: /Ana Matsinhe/ }));
+  expect(screen.getByText("Falta")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Saved correction" }));
+  expect(screen.getByText("Atrasado")).toBeVisible();
+  expect(screen.queryByText("Falta")).not.toBeInTheDocument();
+});
+
+it("retains attendance changes when a request fails in transit", async () => {
+  mockSubmitAttendance.mockRejectedValueOnce(Error("Private transport failure"));
+  setup();
+  await userEvent.click(screen.getByRole("button", { name: /Ana Matsinhe/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Submeter" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível guardar");
+  expect(screen.getByText("Falta")).toBeVisible();
 });

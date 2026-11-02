@@ -3,7 +3,7 @@
 - **Estado:** Aprovado para implementação
 - **Data:** 2026-08-16
 - **Âmbito desta fase:** Design system + shell da aplicação. Sem lógica de negócio.
-- **Fonte de verdade visual:** [`design-system/edumoz/MASTER.md`](../../design-system/edumoz/MASTER.md) (gerado pela skill `ui-ux-pro-max`)
+- **Fonte de verdade visual:** [`design-system/edumoz/MASTER.md`](../../design-system/edumoz/MASTER.md) (consolidado com os tokens e decisões aprovadas em 2026-10-27; orientação inicial pela skill `ui-ux-pro-max`)
 
 ---
 

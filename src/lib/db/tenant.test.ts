@@ -186,6 +186,78 @@ describe("getTenantDb", () => {
     expect(untouched.address).toBeNull();
   });
 
+  it.each(["literal", "set"])("rejects tenant transfers through update and updateMany (%s)", async (mode) => {
+    const db = getTenantDb(schoolA);
+    const subject = await db.subject.create({ data: { schoolId: schoolA, code: `MOVE-${mode}-${suffix}`, name: "Original" } });
+    const schoolId = mode === "literal" ? schoolB : { set: schoolB };
+
+    await expect(db.subject.update({ where: { id: subject.id }, data: { schoolId, name: "Changed" } })).rejects.toThrow(/schoolId/);
+    await expect(db.subject.updateMany({ where: { id: subject.id }, data: { schoolId, name: "Changed" } })).rejects.toThrow(/schoolId/);
+    expect(await prisma.subject.findUnique({ where: { id: subject.id } })).toMatchObject({ schoolId: schoolA, name: "Original" });
+  });
+
+  it.each(["literal", "set"])("rejects an upsert update that transfers its tenant (%s)", async (mode) => {
+    const db = getTenantDb(schoolA);
+    const subject = await db.subject.create({ data: { schoolId: schoolA, code: `UPS-${mode}-${suffix}`, name: "Original" } });
+    await expect(db.subject.upsert({
+      where: { id: subject.id },
+      create: { schoolId: schoolA, code: `UNUSED-${mode}-${suffix}`, name: "Unused" },
+      update: { schoolId: mode === "literal" ? schoolB : { set: schoolB } },
+    })).rejects.toThrow(/schoolId/);
+    expect(await prisma.subject.findUnique({ where: { id: subject.id } })).toMatchObject({ schoolId: schoolA });
+  });
+
+  it("rejects a foreign tenant in the upsert create branch before any write", async () => {
+    const db = getTenantDb(schoolA);
+    const code = `BAD-UPS-${suffix}`;
+    await expect(db.subject.upsert({
+      where: { schoolId_code: { schoolId: schoolA, code } },
+      create: { schoolId: schoolB, code, name: "Foreign" }, update: {},
+    })).rejects.toThrow(/schoolId/);
+    expect(await prisma.subject.count({ where: { code } })).toBe(0);
+  });
+
+  it("rejects relation-based tenant changes and nested school updates", async () => {
+    const db = getTenantDb(schoolA);
+    const subject = await db.subject.create({ data: { schoolId: schoolA, code: `REL-${suffix}`, name: "Original" } });
+    await expect(db.subject.update({ where: { id: subject.id }, data: { school: { connect: { id: schoolB } } } })).rejects.toThrow(/school/);
+    await expect(db.subject.update({ where: { id: subject.id }, data: { school: { update: { name: "Unauthorized rename" } } } })).rejects.toThrow(/school/);
+    expect(await prisma.subject.findUnique({ where: { id: subject.id } })).toMatchObject({ schoolId: schoolA });
+    expect(await prisma.school.findUnique({ where: { id: schoolA } })).toMatchObject({ name: "Escola A" });
+    await expect(db.subject.create({ data: { code: `REL-BAD-${suffix}`, name: "Foreign", school: { connect: { id: schoolB } } } })).rejects.toThrow(/school/);
+  });
+
+  it("rejects malformed explicit tenant values instead of silently replacing them", async () => {
+    const db = getTenantDb(schoolA);
+    for (const schoolId of [null, { set: schoolB }]) {
+      await expect(db.subject.create({ data: { schoolId, code: `MALFORMED-${suffix}`, name: "Invalid" } as never })).rejects.toThrow(/schoolId/);
+    }
+    const code = `ATOMIC-${suffix}`;
+    await expect(db.subject.createMany({ data: [
+      { schoolId: schoolA, code, name: "Valid" },
+      { schoolId: schoolB, code: `${code}-B`, name: "Foreign" },
+    ] })).rejects.toThrow(/schoolId/);
+    expect(await prisma.subject.count({ where: { code } })).toBe(0);
+  });
+
+  it("preserves valid scoped updates, set operations and upserts", async () => {
+    const db = getTenantDb(schoolA);
+    const subject = await db.subject.create({ data: { schoolId: schoolA, code: `VALID-${suffix}`, name: "Original" } });
+    await db.subject.update({ where: { id: subject.id }, data: { schoolId: { set: schoolA }, name: "Updated" } });
+    await db.subject.upsert({ where: { id: subject.id }, create: { schoolId: schoolA, code: `UNUSED-${suffix}`, name: "Unused" }, update: { schoolId: schoolA, name: "Upserted" } });
+    expect(await db.subject.findUnique({ where: { id: subject.id } })).toMatchObject({ schoolId: schoolA, name: "Upserted" });
+  });
+
+  it("rolls back earlier writes when a transaction tries to transfer a tenant", async () => {
+    const db = getTenantDb(schoolA);
+    const subject = await db.subject.create({ data: { schoolId: schoolA, code: `TX-${suffix}`, name: "Original" } });
+    await expect(db.$transaction(async (tx) => {
+      await tx.subject.update({ where: { id: subject.id }, data: { name: "Transient" } });
+      await tx.subject.update({ where: { id: subject.id }, data: { schoolId: schoolB } });
+    })).rejects.toThrow(/schoolId/);
+    expect(await prisma.subject.findUnique({ where: { id: subject.id } })).toMatchObject({ schoolId: schoolA, name: "Original" });
+  });
+
   it("deleteMany não apaga linhas da outra escola", async () => {
     const db = getTenantDb(schoolA);
 
@@ -196,13 +268,11 @@ describe("getTenantDb", () => {
     ).resolves.toBe(1);
   });
 
-  it("não interfere com modelos globais como User", async () => {
+  it("refuses global identity operations through the school client", async () => {
     const db = getTenantDb(schoolA);
-    const email = `isolamento-${suffix}@edumoz.co.mz`;
-
-    const user = await db.user.create({ data: { email, name: "Global" } });
-    expect(user.email).toBe(email);
-
-    await prisma.user.delete({ where: { id: user.id } });
+    await expect(db.user.findMany()).rejects.toThrow(/Global model User/);
+    await expect(db.user.create({ data: { email: `blocked-${suffix}@example.invalid` } })).rejects.toThrow(/Global model User/);
+    await expect(db.$queryRaw`SELECT 1`).rejects.toThrow(/Raw SQL/);
+    expect(await prisma.user.count({ where: { email: `blocked-${suffix}@example.invalid` } })).toBe(0);
   });
 });

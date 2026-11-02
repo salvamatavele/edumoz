@@ -1,0 +1,40 @@
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: { tsconfigPaths: true },
+  test: {
+    maxWorkers: 2,
+    environment: "jsdom",
+    env: { DATABASE_URL: "", TEST_DATABASE_URL: "" },
+    setupFiles: ["./vitest.setup.ts"],
+    include: [
+      "src/**/domain/**/*.test.{ts,tsx}",
+      "src/**/ui/**/*.test.{ts,tsx}",
+      "src/components/**/*.test.{ts,tsx}",
+      "src/i18n/**/*.test.{ts,tsx}",
+      "src/lib/auth/password.test.ts",
+      "src/lib/db/transaction-retry.test.ts",
+      "src/lib/auth/config.test.ts",
+      "src/lib/auth/initial-password-layout.test.tsx",
+      "src/lib/auth/credential-authentication.test.ts",
+      "src/lib/auth/safe-logger.test.ts",
+      "src/lib/auth/session-cookie.test.ts",
+      "src/lib/auth/management-pages.test.tsx",
+      "src/lib/auth/attendance-page.test.tsx",
+      "src/lib/auth/report-cards-page.test.tsx",
+      "src/lib/auth/management-actions.test.ts",
+      "src/features/identity/actions/change-own-password.test.ts",
+      "src/features/identity/actions/membership-permission-roles.test.ts",
+      "src/features/identity/actions/membership-permission-overrides.test.ts",
+      "src/features/identity/actions/create-school-user.test.ts",
+      "src/features/identity/actions/set-school-user-status.test.ts",
+      "src/features/finance/data/gateways/*.test.ts",
+      "src/test/*.test.ts",
+      "src/proxy.test.ts",
+      "src/lib/http/*.test.ts",
+      "src/app/api/auth/**/route.test.ts",
+    ],
+  },
+});

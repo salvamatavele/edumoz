@@ -10,9 +10,12 @@ import { optionalNumberField } from "@/components/form/field-schema";
  */
 export const generateInvoicesSchema = z.object({
   feeScheduleId: z.string().trim().min(1),
-  periodYear: z.coerce.number().int().min(2000),
+  periodYear: z.coerce.number().int().min(2000).max(9999),
   periodMonth: optionalNumberField(z.coerce.number().int().min(1).max(12)),
 });
+
+/** Shared period rules for issuance and read filters. */
+export const invoicePeriodSchema = generateInvoicesSchema.pick({ periodYear: true, periodMonth: true });
 
 export type GenerateInvoicesInput = z.infer<typeof generateInvoicesSchema>;
 

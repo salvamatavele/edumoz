@@ -7,7 +7,11 @@ import { useId, useMemo, useState, useTransition } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PermissionRoleManagementDialog } from "./permission-role-management-dialog";
+import { InstallSystemRolesDialog } from "./install-system-roles-dialog";
+import { MembershipRoleDialog } from "./membership-role-dialog";
+import { MembershipPermissionOverridesDialog } from "./membership-permission-overrides-dialog";
+import { PermissionGrid } from "./permission-grid";
 import {
   Dialog,
   DialogContent,
@@ -17,24 +21,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { assignPermissionRole } from "@/features/identity/actions/assign-permission-role";
 import { createPermissionRole } from "@/features/identity/actions/create-permission-role";
 import type {
+  AssignableStaffPage,
   AssignableStaffRow,
   PermissionCatalogEntryRow,
   PermissionRoleRow,
 } from "@/features/identity/data/permission-roles";
-import { PERMISSION_ACTIONS, PERMISSION_RESOURCES } from "@/features/identity/domain/permission-catalog";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 
 interface PermissionRolesSectionProps {
+  readonly schoolId: string;
   readonly roles: readonly PermissionRoleRow[];
   readonly catalog: readonly PermissionCatalogEntryRow[];
   readonly staff: readonly AssignableStaffRow[];
+  readonly staffPagination?: AssignableStaffPage;
 }
 
-const UNRESTRICTED = "unrestricted";
 
 /**
  * Gestão de papéis configuráveis — a única secção desta escala que o `FormModal` genérico
@@ -42,13 +45,14 @@ const UNRESTRICTED = "unrestricted";
  * Duas partes: a tabela de papéis com o formulário de criação, e a lista de gestores da
  * escola com um selector para atribuir (ou remover) o papel de cada um.
  */
-export function PermissionRolesSection({ roles, catalog, staff }: PermissionRolesSectionProps) {
+export function PermissionRolesSection({ roles, catalog, staff, staffPagination, schoolId }: PermissionRolesSectionProps) {
   const t = useTranslations("permissionRoles");
   const [open, setOpen] = useState(false);
+  const [openedSchoolId, setOpenedSchoolId] = useState(schoolId);
 
   const columns = useMemo<DataTableColumn<PermissionRoleRow>[]>(
     () => [
-      { accessorKey: "name", header: t("columns.name"), meta: { label: t("columns.name") } },
+      { accessorKey: "name", header: t("columns.name"), meta: { label: t("columns.name") }, cell: ({ row }) => <div className="flex flex-wrap items-center gap-2"><span>{row.original.name}</span>{row.original.isSystem ? <Badge tone="neutral">{t("manage.system")}</Badge> : null}</div> },
       {
         accessorKey: "description",
         header: t("columns.description"),
@@ -66,8 +70,9 @@ export function PermissionRolesSection({ roles, catalog, staff }: PermissionRole
         header: t("columns.memberCount"),
         meta: { label: t("columns.memberCount") },
       },
+      { id: "actions", header: t("manage.actions"), meta: { label: t("manage.actions") }, enableSorting: false, cell: ({ row }) => <div className="flex flex-wrap gap-2"><PermissionRoleManagementDialog mode="edit" schoolId={schoolId} roleId={row.original.id} roleName={row.original.name} catalog={catalog} /><PermissionRoleManagementDialog mode="delete" schoolId={schoolId} roleId={row.original.id} roleName={row.original.name} catalog={catalog} /></div> },
     ],
-    [t],
+    [t, schoolId, catalog],
   );
 
   return (
@@ -79,7 +84,8 @@ export function PermissionRolesSection({ roles, catalog, staff }: PermissionRole
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-4">
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <InstallSystemRolesDialog schoolId={schoolId} />
+          <Button size="sm" onClick={() => { setOpenedSchoolId(schoolId); setOpen(true); }}>
             <Plus aria-hidden="true" strokeWidth={1.75} />
             {t("create.trigger")}
           </Button>
@@ -96,11 +102,11 @@ export function PermissionRolesSection({ roles, catalog, staff }: PermissionRole
         />
       </section>
 
-      <StaffAssignmentSection staff={staff} roles={roles} />
+      <StaffAssignmentSection schoolId={schoolId} staff={staff} pagination={staffPagination} />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-          {open ? <CreatePermissionRoleForm catalog={catalog} onOpenChange={setOpen} /> : null}
+        <DialogContent className="min-w-0 max-h-[90dvh] overflow-x-hidden overflow-y-auto sm:max-w-2xl">
+          {open ? <CreatePermissionRoleForm schoolId={openedSchoolId} catalog={catalog} onOpenChange={setOpen} /> : null}
         </DialogContent>
       </Dialog>
     </div>
@@ -108,9 +114,11 @@ export function PermissionRolesSection({ roles, catalog, staff }: PermissionRole
 }
 
 function CreatePermissionRoleForm({
+  schoolId,
   catalog,
   onOpenChange,
 }: {
+  readonly schoolId: string;
   readonly catalog: readonly PermissionCatalogEntryRow[];
   readonly onOpenChange: (open: boolean) => void;
 }) {
@@ -121,58 +129,41 @@ function CreatePermissionRoleForm({
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [requestId] = useState(() => crypto.randomUUID());
   const [description, setDescription] = useState("");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [nameError, setNameError] = useState<string | null>(null);
 
-  const byResource = useMemo(() => {
-    const map = new Map<string, PermissionCatalogEntryRow[]>();
 
-    for (const entry of catalog) {
-      const existing = map.get(entry.resource) ?? [];
-      existing.push(entry);
-      map.set(entry.resource, existing);
-    }
-
-    return map;
-  }, [catalog]);
-
-  function toggle(permissionId: string) {
-    setSelected((current) => {
-      const next = new Set(current);
-
-      if (next.has(permissionId)) next.delete(permissionId);
-      else next.add(permissionId);
-
-      return next;
-    });
-  }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setFormError(null);
     setNameError(null);
 
-    if (!name.trim()) {
+    if (name.trim().length < 3 || name.trim().length > 120 || !/[\p{L}\p{N}]/u.test(name)) {
       setNameError(t("errors.name"));
       return;
     }
 
     startTransition(async () => {
-      const result = await createPermissionRole({
-        name: name.trim(),
-        description,
-        permissionIds: [...selected],
-      });
+      try {
+        const result = await createPermissionRole({
+          expectedSchoolId: schoolId, requestId,
+          name: name.trim(),
+          description,
+          permissionIds: [...selected],
+        });
 
-      if (result.status === "success") {
-        onOpenChange(false);
-        router.refresh();
-        return;
-      }
+        if (result.status === "success") {
+          onOpenChange(false);
+          router.refresh();
+          return;
+        }
 
-      if (result.fieldErrors?.name) setNameError(result.fieldErrors.name);
-      else setFormError(result.message ?? tForm("genericError"));
+        if (result.fieldErrors?.name) setNameError(result.fieldErrors.name);
+        else setFormError(result.message ?? tForm("genericError"));
+      } catch { setFormError(t("errors.createFailed")); }
     });
   }
 
@@ -193,10 +184,12 @@ function CreatePermissionRoleForm({
         </p>
       ) : null}
 
-      <form id={formId} noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <form id={formId} noValidate onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-6">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
           <Input
             label={t("create.fields.name")}
+            minLength={3}
+            maxLength={120}
             required
             disabled={isPending}
             error={nameError ?? undefined}
@@ -205,6 +198,7 @@ function CreatePermissionRoleForm({
           />
           <Input
             label={t("create.fields.description")}
+            maxLength={500}
             disabled={isPending}
             helperText={tForm("optional")}
             value={description}
@@ -212,47 +206,7 @@ function CreatePermissionRoleForm({
           />
         </div>
 
-        <div className="flex flex-col gap-3">
-          <h4 className="text-sm font-semibold">{t("create.permissionsTitle")}</h4>
-
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[520px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-3 py-2 text-left font-medium">{t("create.resourceColumn")}</th>
-                  {PERMISSION_ACTIONS.map((action) => (
-                    <th key={action} className="px-3 py-2 text-center font-medium">
-                      {t(`actions.${action}`)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {PERMISSION_RESOURCES.map((resource) => (
-                  <tr key={resource} className="border-b border-border last:border-b-0">
-                    <td className="px-3 py-2 font-medium">{t(`resources.${resource}`)}</td>
-                    {PERMISSION_ACTIONS.map((action) => {
-                      const entry = (byResource.get(resource) ?? []).find((item) => item.action === action);
-
-                      return (
-                        <td key={action} className="px-3 py-2 text-center">
-                          {entry ? (
-                            <Checkbox
-                              disabled={isPending}
-                              checked={selected.has(entry.id)}
-                              onCheckedChange={() => toggle(entry.id)}
-                              aria-label={`${t(`resources.${resource}`)} — ${t(`actions.${action}`)}`}
-                            />
-                          ) : null}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PermissionGrid catalog={catalog} selected={selected} onChange={setSelected} disabled={isPending} />
       </form>
 
       <DialogFooter>
@@ -267,97 +221,13 @@ function CreatePermissionRoleForm({
   );
 }
 
-function StaffAssignmentSection({
-  staff,
-  roles,
-}: {
-  readonly staff: readonly AssignableStaffRow[];
-  readonly roles: readonly PermissionRoleRow[];
-}) {
+function StaffAssignmentSection({ schoolId, staff, pagination }: { readonly schoolId: string; readonly staff: readonly AssignableStaffRow[]; readonly pagination?: AssignableStaffPage }) {
   const t = useTranslations("permissionRoles");
-
-  return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-6">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-lg font-semibold">{t("staffTitle")}</h3>
-        <p className="text-sm text-muted-foreground">{t("staffSubtitle")}</p>
-      </div>
-
-      {staff.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("staffEmpty")}</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {staff.map((member) => (
-            <StaffRow key={member.membershipId} member={member} roles={roles} />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function StaffRow({
-  member,
-  roles,
-}: {
-  readonly member: AssignableStaffRow;
-  readonly roles: readonly PermissionRoleRow[];
-}) {
-  const t = useTranslations("permissionRoles");
-  const router = useRouter();
-  const id = useId();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function handleChange(value: string) {
-    setError(null);
-
-    startTransition(async () => {
-      const result = await assignPermissionRole({
-        membershipId: member.membershipId,
-        permissionRoleId: value === UNRESTRICTED ? null : value,
-      });
-
-      if (result.status === "error") {
-        setError(result.message ?? t("errors.assignFailed"));
-        return;
-      }
-
-      router.refresh();
-    });
-  }
-
-  return (
-    <li className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-3">
-        <span className="font-medium text-foreground">{member.userName}</span>
-        {member.permissionRoleId ? (
-          <Badge tone="neutral">{t("restricted")}</Badge>
-        ) : (
-          <Badge tone="success">{t("unrestrictedBadge")}</Badge>
-        )}
-      </div>
-
-      <div className="flex flex-col items-end gap-1">
-        <Select
-          disabled={isPending}
-          value={member.permissionRoleId ?? UNRESTRICTED}
-          onValueChange={handleChange}
-        >
-          <SelectTrigger id={`${id}-role`} className="h-9 w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={UNRESTRICTED}>{t("unrestrictedOption")}</SelectItem>
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.id}>
-                {role.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      </div>
-    </li>
-  );
+  const allRoles = useTranslations("roles");
+  return <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-6">
+    <div className="flex flex-col gap-1"><h3 className="text-lg font-semibold">{t("staffTitle")}</h3><p className="text-sm text-muted-foreground">{t("staffSubtitle")}</p></div>
+    {pagination ? <form method="get" className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end"><Input name="staffQuery" label={t("assignment.staffSearch")} defaultValue={pagination.query} maxLength={120} /><Button type="submit" variant="secondary">{t("assignment.searchButton")}</Button></form> : null}
+    {staff.length ? <ul className="flex flex-col gap-2">{staff.map(member => <li key={member.membershipId} className="flex min-w-0 flex-col gap-3 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 flex-col gap-2"><span className="break-words font-medium">{member.userName || t("assignment.unnamed", { code: member.membershipId.slice(-8) })}</span><div className="flex flex-wrap items-center gap-2"><Badge tone="neutral">{allRoles(member.baseRole)}</Badge>{member.status === "SUSPENDED" ? <Badge tone="warning">{t("assignment.suspendedBadge")}</Badge> : null}<Badge tone={member.mode === "legacy" && !member.activeOverrideCount ? "success" : "neutral"}>{member.mode === "legacy" ? t(member.activeOverrideCount ? "overrides.legacyRestricted" : "unrestrictedBadge") : t("assignment.roleCount", { count: member.assignedRoleCount })}</Badge>{member.overrideCount ? <Badge tone="neutral">{t("overrides.badge", { count: member.overrideCount })}</Badge> : null}{member.isCurrentUser ? <span className="text-sm text-muted-foreground">{t("assignment.currentUser")}</span> : null}</div></div><div className="flex flex-wrap gap-2"><MembershipRoleDialog schoolId={schoolId} membershipId={member.membershipId} accountName={member.userName || t("assignment.unnamed", { code: member.membershipId.slice(-8) })} disabled={member.isCurrentUser} /><MembershipPermissionOverridesDialog schoolId={schoolId} membershipId={member.membershipId} accountName={member.userName || t("assignment.unnamed", { code: member.membershipId.slice(-8) })} disabled={member.isCurrentUser} /></div></li>)}</ul> : <p className="text-sm text-muted-foreground">{t("staffEmpty")}</p>}
+    {pagination && pagination.pageCount > 1 ? <nav aria-label={t("assignment.staffPagination")} className="flex flex-wrap items-center justify-between gap-2"><Button asChild variant="secondary" size="sm" disabled={pagination.page === 1}>{pagination.page > 1 ? <Link href={{ pathname: "/settings", query: { staffQuery: pagination.query, staffPage: pagination.page - 1 } }}>{t("assignment.previous")}</Link> : <span aria-disabled="true">{t("assignment.previous")}</span>}</Button><p className="text-sm text-muted-foreground">{t("assignment.page", { page: pagination.page, total: pagination.pageCount })}</p><Button asChild variant="secondary" size="sm" disabled={pagination.page >= pagination.pageCount}>{pagination.page < pagination.pageCount ? <Link href={{ pathname: "/settings", query: { staffQuery: pagination.query, staffPage: pagination.page + 1 } }}>{t("assignment.next")}</Link> : <span aria-disabled="true">{t("assignment.next")}</span>}</Button></nav> : null}
+  </section>;
 }

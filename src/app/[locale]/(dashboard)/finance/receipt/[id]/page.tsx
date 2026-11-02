@@ -1,10 +1,10 @@
+import { AccessDenied } from "@/components/layout/access-denied";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getReceipt } from "@/features/finance/data/payments";
 import { ReceiptPrintButton } from "@/features/finance/ui/receipt-print-button";
-import { isSchoolAdministrator, type SessionContext } from "@/features/identity/domain/access";
-import { redirect } from "@/i18n/navigation";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { auth } from "@/lib/auth/config";
 
 export async function generateMetadata({
@@ -34,16 +34,10 @@ export default async function ReceiptPage({ params }: PageProps<"/[locale]/finan
     );
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
-    redirect({ href: "/students", locale });
+  if (!hasPermission(context, "finance", "view")) {
+    return <AccessDenied message={tCommon("forbidden")} />;
   }
 
   const receipt = await getReceipt(session.schoolId, id);
@@ -82,7 +76,7 @@ export default async function ReceiptPage({ params }: PageProps<"/[locale]/finan
           <dt className="text-muted-foreground">{t("receipt.invoiceLabel")}</dt>
           <dd className="font-medium text-foreground">{receipt.invoiceReference}</dd>
 
-          <dt className="text-muted-foreground">{t("receipt.amountLabel")}</dt>
+          <dt className="text-muted-foreground">{t("receipt.amountLabel", { currency: receipt.currency === "MZN" && locale === "pt" ? "MT" : receipt.currency })}</dt>
           <dd className="font-medium text-foreground">{receipt.amount}</dd>
 
           <dt className="text-muted-foreground">{t("receipt.methodLabel")}</dt>

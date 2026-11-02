@@ -172,4 +172,11 @@ describe("FormModal", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
+  it.each([['pt', 'Guardar', 'Demasiado pequeno'], ['en', 'Save', 'Too small']] as const)("localizes default validation messages in %s without changing custom errors", async (locale, save, expected) => {
+    const defaultSchema = z.object({ code: z.string().min(4) });
+    renderWithIntl(<FormModal open onOpenChange={vi.fn()} title="Validation" definition={{ schema: defaultSchema, fields: [{ name: "code", kind: "text", label: "Code" }] }} defaultValues={{ code: "" }} onSubmit={vi.fn()} />, locale);
+    await userEvent.click(screen.getByRole("button", { name: save }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(expected);
+  });
+
 });

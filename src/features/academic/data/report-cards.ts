@@ -12,7 +12,7 @@ export interface ReportCardFilters {
 }
 
 /** Opções dos três selectores da pauta — turmas, disciplinas e trimestres do ano activo. */
-export async function listReportCardFilters(schoolId: string): Promise<ReportCardFilters> {
+export async function listReportCardFilters(schoolId: string, teacherUserId?: string): Promise<ReportCardFilters> {
   const db = getTenantDb(schoolId);
 
   const academicYear = await db.academicYear.findFirst({
@@ -24,12 +24,12 @@ export async function listReportCardFilters(schoolId: string): Promise<ReportCar
 
   const [classGroups, subjects, terms] = await Promise.all([
     db.classGroup.findMany({
-      where: { academicYearId: academicYear.id },
+      where: { academicYearId: academicYear.id, ...(teacherUserId !== undefined ? { enrollments: { some: { teachingGroups: { some: { teachingGroup: { schoolId, teacher: { schoolId, userId: teacherUserId, isActive: true } } } } } } } : {}) },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     db.subject.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...(teacherUserId !== undefined ? { teachingGroups: { some: { schoolId, academicYearId: academicYear.id, teacher: { schoolId, userId: teacherUserId, isActive: true } } } } : {}) },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -76,8 +76,15 @@ export async function getReportCard(
   classGroupId: string,
   subjectId: string,
   termId: string,
+  teacherUserId?: string,
 ): Promise<ReportCard> {
   const db = getTenantDb(schoolId);
+
+  // Ownership is checked before reading names or results, including direct URL requests.
+  if (teacherUserId !== undefined) {
+    const owned = await db.teachingGroup.findFirst({ where: { schoolId, subjectId, teacher: { schoolId, userId: teacherUserId, isActive: true }, academicYear: { terms: { some: { id: termId, schoolId } } }, members: { some: { enrollment: { schoolId, classGroupId } } } }, select: { id: true } });
+    if (!owned) return { status: "not-found" };
+  }
 
   const [classGroup, subject, term] = await Promise.all([
     db.classGroup.findUnique({ where: { id: classGroupId }, select: { name: true } }),
@@ -89,7 +96,7 @@ export async function getReportCard(
   if (term.status !== "CLOSED") return { status: "term-open" };
 
   const enrollments = await db.enrollment.findMany({
-    where: { classGroupId },
+    where: { classGroupId, ...(teacherUserId !== undefined ? { teachingGroups: { some: { teachingGroup: { schoolId, subjectId, teacher: { schoolId, userId: teacherUserId, isActive: true } } } } } : {}) },
     select: {
       id: true,
       student: { select: { firstName: true, lastName: true } },

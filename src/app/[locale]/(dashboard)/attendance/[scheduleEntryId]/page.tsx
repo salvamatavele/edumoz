@@ -4,6 +4,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { findTeacherByUserId, getAttendanceRoster, todayInMaputo } from "@/features/academic/data/attendance";
 import { AttendanceSheet } from "@/features/academic/ui/attendance-sheet";
+import { AccessDenied } from "@/components/layout/access-denied";
+import { hasPermission, toSessionContext } from "@/features/identity/domain/access";
 import { auth } from "@/lib/auth/config";
 import type { AttendanceStatus } from "@/types";
 
@@ -48,6 +50,10 @@ export default async function AttendanceSheetPage({
     : todayInMaputo();
 
   const teacher = await findTeacherByUserId(session.schoolId, session.user.id);
+  const context = toSessionContext(session);
+  if (!teacher && !hasPermission(context, "attendance", "view")) {
+    return <AccessDenied message={t("auth.noAccess")} />;
+  }
   const roster = await getAttendanceRoster(session.schoolId, scheduleEntryId, date, teacher?.id ?? null);
 
   if (!roster) {
@@ -68,6 +74,7 @@ export default async function AttendanceSheetPage({
         status: entry.status as AttendanceStatus,
       }))}
       readOnly={!roster.isOwn}
+      canReopen={roster.isOwn || hasPermission(context, "attendance", "edit")}
     />
   );
 }

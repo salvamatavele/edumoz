@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -50,6 +51,7 @@ export default async function AttendancePage({
   const date = requestedDate
     ? new Date(`${requestedDate}T00:00:00.000Z`)
     : todayInMaputo();
+  if (!Number.isFinite(date.getTime())) notFound();
   const isoDate = toIsoDate(date);
 
   const teacher = await findTeacherByUserId(session.schoolId, session.user.id);

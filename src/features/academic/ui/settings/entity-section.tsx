@@ -11,6 +11,7 @@ import { FormModal } from "@/components/form/form-modal";
 import { Button } from "@/components/ui/button";
 
 interface EntitySectionProps<TRow, TValues extends FieldValues> {
+  readonly canCreate?: boolean;
   readonly subtitle: string;
   readonly tableLabel: string;
   readonly columns: DataTableColumn<TRow>[];
@@ -46,6 +47,7 @@ interface EntitySectionProps<TRow, TValues extends FieldValues> {
  * moldura) para se destacar do fundo da página, em vez de flutuar solta.
  */
 export function EntitySection<TRow, TValues extends FieldValues>({
+  canCreate = true,
   subtitle,
   tableLabel,
   columns,
@@ -71,12 +73,12 @@ export function EntitySection<TRow, TValues extends FieldValues>({
 
         {missingDependencyReason ? (
           <p className="text-sm text-muted-foreground">{missingDependencyReason}</p>
-        ) : (
+        ) : canCreate ? (
           <Button size="sm" onClick={() => setOpen(true)}>
             <Plus aria-hidden="true" strokeWidth={1.75} />
             {createTrigger}
           </Button>
-        )}
+        ) : null}
       </div>
 
       <DataTable

@@ -12,7 +12,7 @@ export const recordGradesSchema = z.object({
   changes: z.array(
     z.object({
       enrollmentId: z.string().trim().min(1),
-      score: optionalNumberField(z.coerce.number().min(0)),
+      score: optionalNumberField(z.coerce.number().min(0).max(999.99).multipleOf(0.01)),
       isAbsent: z.boolean(),
       note: z.string().trim().optional(),
     }),

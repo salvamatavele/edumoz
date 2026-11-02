@@ -88,8 +88,9 @@ escolas. Mitigação em três camadas — (a) a extensão aplica o filtro automa
 (c) um teste de integração verifica que uma query feita no contexto da escola A não devolve
 linhas da escola B.
 
-`User` e `AuditLog` são deliberadamente **globais** — um utilizador pode pertencer a várias
-escolas (um professor que lecciona em duas). O vínculo faz-se por `Membership`.
+`User` é global: uma conta pode pertencer a várias escolas através de `Membership`. O cliente de escola não expõe operações globais de identidade. `AuditLog` tem schoolId opcional: o cliente de escola limita-o à escola activa; auditoria de plataforma usa a fronteira global autorizada.
+
+Desde a fundação de paridade (2026-10-27), junções são filtradas pelo pai e escritas aninhadas são percorridas. Triggers MariaDB validam relações e mantêm IDs/âncoras de escola e ano imutáveis; uma query principal scoped não substitui essa garantia persistente. Ver `docs/specs/esagrada-tenant-integrity.md`.
 
 ### 3.2 Módulos por domínio
 

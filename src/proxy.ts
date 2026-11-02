@@ -1,7 +1,9 @@
 import createMiddleware from "next-intl/middleware";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { isTrustedMutationOrigin } from "@/features/identity/domain/mutation-origin";
 import { PROTECTED_PATHNAMES, routing } from "@/i18n/routing";
+import { hasSessionTokenCookie } from "@/lib/auth/session-cookie";
 
 /**
  * Encaminhamento por língua e verificação optimista de sessão.
@@ -19,12 +21,6 @@ import { PROTECTED_PATHNAMES, routing } from "@/i18n/routing";
  */
 const handleI18n = createMiddleware(routing);
 
-/** Nomes usados pelo Auth.js consoante o protocolo. */
-const SESSION_COOKIES = [
-  "authjs.session-token",
-  "__Secure-authjs.session-token",
-];
-
 /** Retira o prefixo de língua, para `/alunos` e `/en/students` darem o mesmo resultado. */
 function toInternalPathname(pathname: string): string {
   for (const locale of routing.locales) {
@@ -37,21 +33,35 @@ function toInternalPathname(pathname: string): string {
 
   for (const [internal, localised] of Object.entries(routing.pathnames)) {
     if (typeof localised === "string") {
-      if (pathname === localised) return internal;
+      if (pathname === localised || pathname.startsWith(`${localised}/`)) return internal + pathname.slice(localised.length);
       continue;
     }
 
-    if ((Object.values(localised) as string[]).includes(pathname)) return internal;
+    for (const path of Object.values(localised)) {
+      if (pathname === path || pathname.startsWith(`${path}/`)) return internal + pathname.slice(path.length);
+    }
   }
 
   return pathname;
 }
 
 function hasSessionCookie(request: NextRequest): boolean {
-  return SESSION_COOKIES.some((name) => request.cookies.has(name));
+  return hasSessionTokenCookie(request.cookies.getAll().map((cookie) => cookie.name));
+}
+
+function privateResponse(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  const vary = response.headers.get("Vary")?.split(",").map((value) => value.trim()) ?? [];
+  if (!vary.some((value) => value.toLowerCase() === "cookie")) vary.push("Cookie");
+  response.headers.set("Vary", vary.join(", "));
+  return response;
 }
 
 export function proxy(request: NextRequest) {
+  if (!["GET", "HEAD", "OPTIONS"].includes(request.method)
+      && !isTrustedMutationOrigin(request.headers.get("origin"), process.env.AUTH_URL || request.nextUrl.origin)) {
+    return privateResponse(new NextResponse(null, { status: 403 }));
+  }
   const internal = toInternalPathname(request.nextUrl.pathname);
   const isProtected = PROTECTED_PATHNAMES.some(
     (route) => internal === route || internal.startsWith(`${route}/`),
@@ -64,12 +74,14 @@ export function proxy(request: NextRequest) {
     // não aterrar numa página portuguesa.
     const isEnglish = request.nextUrl.pathname.startsWith("/en");
     url.pathname = isEnglish ? "/en/sign-in" : "/entrar";
-    url.searchParams.set("continuar", request.nextUrl.pathname);
+    url.search = "";
+    url.searchParams.set("continuar", request.nextUrl.pathname + request.nextUrl.search);
 
-    return NextResponse.redirect(url);
+    return privateResponse(NextResponse.redirect(url));
   }
 
-  return handleI18n(request);
+  const response = handleI18n(request);
+  return isProtected ? privateResponse(response) : response;
 }
 
 export const config = {

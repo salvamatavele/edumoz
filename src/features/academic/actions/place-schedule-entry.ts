@@ -16,14 +16,19 @@ import {
 } from "@/features/academic/domain/place-schedule-entry-schema";
 import type { ScheduleConflict } from "@/features/academic/domain/scheduling";
 import {
-  isSchoolAdministrator,
-  type SessionContext,
+  hasPermission,
+  toSessionContext,
 } from "@/features/identity/domain/access";
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { auth } from "@/lib/auth/config";
+import { withTransactionRetry } from "@/lib/db/transaction-retry";
 import { Prisma, UNIQUE_CONSTRAINT_VIOLATION } from "@/lib/db/errors";
 import { getTenantDb } from "@/lib/db/tenant";
+
+class SchedulePlacementError extends Error {
+  constructor(readonly code: "invalid" | "noActiveYear" | "raceCondition") { super(code); }
+}
 
 /**
  * Traduz um conflito para texto, com os nomes já resolvidos — nunca uma mensagem genérica.
@@ -74,15 +79,9 @@ export async function placeScheduleEntry(
     return { status: "error", message: t("common.forbidden") };
   }
 
-  const context: SessionContext = {
-    userId: session.user.id,
-    isPlatformAdmin: session.isPlatformAdmin,
-    schoolId: session.schoolId,
-    role: session.role,
-    memberships: session.memberships,
-  };
+  const context = toSessionContext(session);
 
-  if (!isSchoolAdministrator(context)) {
+  if (!hasPermission(context, "scheduling", values?.id ? "edit" : "create")) {
     return { status: "error", message: t("common.forbidden") };
   }
 
@@ -194,7 +193,30 @@ export async function placeScheduleEntry(
   }
 
   try {
-    await db.$transaction(async (tx) => {
+    await withTransactionRetry(() => db.$transaction(async (tx) => {
+      // All schedule placements lock the active year before checking shared students.
+      // SQL uniqueness alone cannot detect a student attending two different groups.
+      const claimed = await tx.academicYear.updateMany({
+        where: { id: academicYear.id, isActive: true }, data: { isActive: true },
+      });
+      if (claimed.count !== 1) throw new SchedulePlacementError("noActiveYear");
+      const [currentGroup, currentSlot, currentRoom, existingEntry] = await Promise.all([
+        tx.teachingGroup.findFirst({ where: { id: data.teachingGroupId, academicYearId: academicYear.id, teacher: { isActive: true } }, select: { teacherId: true } }),
+        tx.timeSlot.findFirst({ where: { id: data.timeSlotId, academicYearId: academicYear.id }, select: { id: true } }),
+        tx.room.findFirst({ where: { id: data.roomId, isActive: true }, select: { id: true } }),
+        data.id ? tx.scheduleEntry.findFirst({ where: { id: data.id, academicYearId: academicYear.id }, select: { id: true } }) : Promise.resolve(true),
+      ]);
+      if (!currentGroup || currentGroup.teacherId !== teacherId || !currentSlot || !currentRoom || !existingEntry) throw new SchedulePlacementError("invalid");
+      const currentEntries = await tx.scheduleEntry.findMany({
+        where: { academicYearId: academicYear.id },
+        select: { id: true, teachingGroupId: true, teacherId: true, roomId: true, timeSlotId: true },
+      });
+      const currentGroups = await tx.teachingGroup.findMany({
+        where: { academicYearId: academicYear.id },
+        select: { id: true, members: { select: { enrollmentId: true } } },
+      });
+      const currentMemberships = currentGroups.map((group) => ({ teachingGroupId: group.id, enrollmentIds: group.members.map((member) => member.enrollmentId) }));
+      if (conflictsForPlacement(candidate, currentEntries, currentMemberships).length > 0) throw new SchedulePlacementError("raceCondition");
       let entry: { id: string };
 
       if (data.id) {
@@ -230,8 +252,13 @@ export async function placeScheduleEntry(
           after: JSON.parse(JSON.stringify(entry)),
         },
       });
-    });
+    }, { isolationLevel: "ReadCommitted" }));
   } catch (error) {
+    if (error instanceof SchedulePlacementError) {
+      return error.code === "raceCondition"
+        ? { status: "conflict", conflicts: [t("scheduling.conflicts.raceCondition")] }
+        : { status: "error", message: t(`scheduling.errors.${error.code}`) };
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === UNIQUE_CONSTRAINT_VIOLATION

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-intl/server", () => ({
@@ -28,6 +29,8 @@ const mockRevalidatePath = vi.mocked(revalidatePath);
 describe("createPermissionRole", () => {
   const suffix = `T${Date.now()}`;
   let schoolId = "";
+  let unrestrictedActorId = "";
+  let platformActorId = "";
   let viewPermissionId = "";
   let restrictedRoleId = "";
   let restrictedActorId = "";
@@ -37,6 +40,8 @@ describe("createPermissionRole", () => {
       data: { code: `CPR-${suffix}`, name: "Escola de teste (papéis)", province: "Maputo", district: "KaMpfumu" },
     });
     schoolId = school.id;
+    unrestrictedActorId = (await prisma.user.create({ data: { name: "Synthetic role creator", memberships: { create: { schoolId, role: "SCHOOL_MANAGER" } } } })).id;
+    platformActorId = (await prisma.user.create({ data: { name: "Synthetic platform role creator", isPlatformAdmin: true } })).id;
 
     const viewPermission = await prisma.permission.upsert({
       where: { resource_action: { resource: "students", action: "view" } },
@@ -70,7 +75,7 @@ describe("createPermissionRole", () => {
     await prisma.auditLog.deleteMany({ where: { schoolId } });
     await prisma.membership.deleteMany({ where: { schoolId } });
     await prisma.permissionRole.deleteMany({ where: { schoolId } });
-    await prisma.user.deleteMany({ where: { id: restrictedActorId } });
+    await prisma.user.deleteMany({ where: { id: { in: [restrictedActorId, unrestrictedActorId, platformActorId] } } });
     await prisma.school.delete({ where: { id: schoolId } });
     await prisma.$disconnect();
   });
@@ -97,33 +102,33 @@ describe("createPermissionRole", () => {
 
   it("recusa sem sessão", async () => {
     mockAuth.mockResolvedValue(null);
-    const result = await createPermissionRole({ name: roleName, description: "", permissionIds: [] });
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(), name: roleName, description: "", permissionIds: [] });
     expect(result.status).toBe("error");
   });
 
   it("recusa um professor", async () => {
     mockAuth.mockResolvedValue(sessionAs({ userId: "teacher-1", role: "TEACHER" }));
-    const result = await createPermissionRole({ name: roleName, description: "", permissionIds: [] });
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(), name: roleName, description: "", permissionIds: [] });
     expect(result.status).toBe("error");
   });
 
   it("recusa um gestor já restrito por um papel — não se pode auto-promover", async () => {
     mockAuth.mockResolvedValue(sessionAs({ userId: restrictedActorId, role: "SCHOOL_MANAGER" }));
-    const result = await createPermissionRole({ name: roleName, description: "", permissionIds: [] });
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(), name: roleName, description: "", permissionIds: [] });
     expect(result.status).toBe("error");
   });
 
   it("devolve fieldErrors quando o nome é inválido", async () => {
-    mockAuth.mockResolvedValue(sessionAs({ userId: "unrestricted-actor", role: "SCHOOL_MANAGER" }));
-    const result = await createPermissionRole({ name: "", description: "", permissionIds: [] });
+    mockAuth.mockResolvedValue(sessionAs({ userId: unrestrictedActorId, role: "SCHOOL_MANAGER" }));
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(), name: "", description: "", permissionIds: [] });
     expect(result.status).toBe("error");
     if (result.status === "error") expect(result.fieldErrors?.name).toBeDefined();
   });
 
   it("cria o papel com as permissões marcadas e regista o AuditLog, para um gestor sem papel atribuído", async () => {
-    mockAuth.mockResolvedValue(sessionAs({ userId: "unrestricted-actor", role: "SCHOOL_MANAGER" }));
+    mockAuth.mockResolvedValue(sessionAs({ userId: unrestrictedActorId, role: "SCHOOL_MANAGER" }));
 
-    const result = await createPermissionRole({
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(),
       name: roleName,
       description: "Vê alunos, mais nada",
       permissionIds: [viewPermissionId],
@@ -145,10 +150,10 @@ describe("createPermissionRole", () => {
   });
 
   it("cria o papel para um administrador da plataforma, mesmo sem Membership de gestor", async () => {
-    mockAuth.mockResolvedValue(sessionAs({ userId: "platform-admin", role: null, isPlatformAdmin: true }));
+    mockAuth.mockResolvedValue(sessionAs({ userId: platformActorId, role: null, isPlatformAdmin: true }));
 
     const platformAdminRoleName = `Papel do superadmin (${suffix})`;
-    const result = await createPermissionRole({ name: platformAdminRoleName, description: "", permissionIds: [] });
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(), name: platformAdminRoleName, description: "", permissionIds: [] });
 
     expect(result.status).toBe("success");
 
@@ -156,22 +161,35 @@ describe("createPermissionRole", () => {
     expect(created).not.toBeNull();
   });
 
-  it("ignora ids de permissão que não existem no catálogo", async () => {
-    mockAuth.mockResolvedValue(sessionAs({ userId: "unrestricted-actor", role: "SCHOOL_MANAGER" }));
-
-    const garbageRoleName = `Papel com id inválido (${suffix})`;
-    const result = await createPermissionRole({
-      name: garbageRoleName,
-      description: "",
-      permissionIds: ["id-inexistente"],
-    });
-
-    expect(result.status).toBe("success");
-
-    const created = await prisma.permissionRole.findFirstOrThrow({
-      where: { schoolId, name: garbageRoleName },
-      include: { permissions: true },
-    });
-    expect(created.permissions).toHaveLength(0);
+  it("rejects unknown permission identifiers without creating a misleading empty role", async () => {
+    mockAuth.mockResolvedValue(sessionAs({ userId: unrestrictedActorId, role: "SCHOOL_MANAGER" }));
+    const garbageRoleName = `Invalid permission ${suffix}`;
+    const result = await createPermissionRole({ expectedSchoolId: schoolId, requestId: randomUUID(), name: garbageRoleName, description: "", permissionIds: ["missing-id"] });
+    expect(result.status).toBe("error");
+    expect(await prisma.permissionRole.count({ where: { schoolId, name: garbageRoleName } })).toBe(0);
   });
+  it("keeps uncertain creation retries idempotent and refuses a changed request", async () => {
+    mockAuth.mockResolvedValue(sessionAs({ userId: unrestrictedActorId, role: "SCHOOL_MANAGER" }));
+    const input = { expectedSchoolId: schoolId, requestId: randomUUID(), name: `Idempotent ${suffix}`, description: "Private description must not enter audit", permissionIds: [viewPermissionId] };
+    const repeated = await Promise.all(Array.from({ length: 4 }, () => createPermissionRole(input)));
+    expect(repeated.every(result => result.status === "success")).toBe(true);
+    const roles = await prisma.permissionRole.findMany({ where: { schoolId, name: input.name } });
+    expect(roles).toHaveLength(1);
+    const logs = await prisma.auditLog.findMany({ where: { entityId: roles[0].id } });
+    expect(logs).toHaveLength(1);
+    expect(JSON.stringify(logs)).not.toContain(input.description);
+    expect(await createPermissionRole({ ...input, name: "Changed after uncertainty" })).toMatchObject({ status: "error", message: "permissionRoles.errors.requestChanged" });
+    expect((await prisma.permissionRole.findUniqueOrThrow({ where: { id: roles[0].id } })).name).toBe(input.name);
+  });
+  it("refuses stale school, revoked actor and duplicate names safely", async () => {
+    mockAuth.mockResolvedValue(sessionAs({ userId: unrestrictedActorId, role: "SCHOOL_MANAGER" }));
+    const input = { expectedSchoolId: schoolId, requestId: randomUUID(), name: `Duplicate ${suffix}`, description: "", permissionIds: [] };
+    expect(await createPermissionRole({ ...input, expectedSchoolId: "another-school" })).toMatchObject({ status: "error", message: "users.errors.schoolChanged" });
+    expect((await createPermissionRole(input)).status).toBe("success");
+    expect(await createPermissionRole({ ...input, requestId: randomUUID() })).toMatchObject({ status: "error", message: "permissionRoles.errors.duplicateName" });
+    await prisma.membership.updateMany({ where: { schoolId, userId: unrestrictedActorId }, data: { status: "SUSPENDED" } });
+    try { expect(await createPermissionRole({ ...input, name: "Revoked must not create", requestId: randomUUID() })).toMatchObject({ status: "error", message: "users.errors.forbidden" }); }
+    finally { await prisma.membership.updateMany({ where: { schoolId, userId: unrestrictedActorId }, data: { status: "ACTIVE" } }); }
+  });
+
 });
